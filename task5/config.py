@@ -1,3 +1,3 @@
 import os
 
-SECRET_KEY = os.environ.get('SECRET_KEY')
+SECRET_KEY = b'67876545676543456765434567'

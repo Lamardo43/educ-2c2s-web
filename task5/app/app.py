@@ -1,5 +1,8 @@
 from flask import Flask, render_template, session, request, redirect, url_for, flash
 from flask_login import LoginManager, login_user, logout_user, UserMixin, current_user, login_required
+import sys
+
+sys.path.append("../")
 import config
 
 app = Flask(__name__)
