@@ -19,7 +19,7 @@ def cookies():
     response = make_response(
         render_template('requestInfo.html', header='cookies', data=request.cookies)
     )
-    response.set_cookie("Pum pum", "Hello")
+    response.set_cookie("cookie1", "cookie1")
     return response
 
 
