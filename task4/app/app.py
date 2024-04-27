@@ -11,13 +11,13 @@ def index():
 
 @app.route('/headers')
 def headers():
-    return render_template('requestInfo.html', header='Заголовки', data=request.headers)
+    return render_template('infoTable.html', header='Заголовки', data=request.headers)
 
 
 @app.route('/cookies')
 def cookies():
     response = make_response(
-        render_template('requestInfo.html', header='cookies', data=request.cookies)
+        render_template('infoTable.html', header='cookies', data=request.cookies)
     )
     response.set_cookie("cookie1", "cookie1")
     return response
@@ -25,7 +25,7 @@ def cookies():
 
 @app.route('/url_params')
 def url_params():
-    return render_template('requestInfo.html', header='url_params', data=request.args)
+    return render_template('infoTable.html', header='url_params', data=request.args)
 
 
 @app.route('/form', methods=['GET', 'POST'])
@@ -38,9 +38,9 @@ def phone():
     if request.method == 'GET':
         return render_template('phone.html')
 
-    formatted_phone_number = phone_number = request.form.get('phone_number', '')
-    symbols_to_replace = {'+', ' ', '(', ')', '-', '.'}
-    phone_number = ''.join([char for char in phone_number if char not in symbols_to_replace])
+    formatted_phone_number = phone_number = request.form.get('phone_number')
+    replace_array = {'+', ' ', '(', ')', '-', '.'}
+    phone_number = ''.join([char for char in phone_number if char not in replace_array])
 
     errors = []
 
@@ -53,6 +53,7 @@ def phone():
         formatted_phone_number = f'8-{phone_number[-10:-7]}-{phone_number[-7:-4]}-{phone_number[-4:-2]}-{phone_number[-2:]}'
 
     return render_template('phone.html', phone_number=formatted_phone_number, errors=errors)
+
 
 if __name__ == '__main__':
     app.run(debug=True)

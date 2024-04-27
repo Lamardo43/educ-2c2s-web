@@ -6,6 +6,7 @@
         {% for post in posts %}
             <div class="col-md-6 d-flex">
                 <div class="card mb-4">
+{#                    /static/images/{...}#}
                     <img class="card-img-top" src="{{ url_for('static', filename='images/' + post.image_id) }}"
                          alt="Card image cap">
                     <div class="card-body">
@@ -13,6 +14,7 @@
                         <p class="card-text">
                             {{ post.text | truncate(100) }}
                         </p>
+{#                        /post/{1..5}#}
                         <a href="{{ url_for('post', index=loop.index0) }}" class="btn btn-primary">Читать дальше
                             &rarr;</a>
                     </div>
