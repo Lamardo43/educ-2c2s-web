@@ -54,9 +54,8 @@ def check_password(password):
         errors.append("Пароль должен содержать как минимум одну заглавную букву.")
     if not re.search("[0-9]", password):
         errors.append("Пароль должен содержать как минимум одну цифру.")
-    if not re.match("[~!@#$%^&*_\-+=()\[\]{}><\\/|\"'.,:;]", password):
-        errors.append(
-            "Пароль может содержать только латинские или кириллические буквы, арабские цифры и указанные символы.")
+    if not re.search(r"[~!@#$%^&*_\-+=()\[\]{}><\\/|\"'.,:;]", password):
+        errors.append("Пароль должен содержать хотя бы один специальный символ")
     return errors
 
 
@@ -123,6 +122,7 @@ def counter():
     session['counter'] = session.get('counter', 0) + 1
     return render_template('counter.html')
 
+
 @app.route('/change-password', methods=['GET', 'POST'])
 @login_required
 def change_password():
@@ -139,13 +139,15 @@ def change_password():
 
         try:
             with connection.cursor(named_tuple=True, buffered=True) as cursor:
-                cursor.execute("SELECT id FROM users WHERE id = %s AND password_hash = SHA2(%s, 256)", [user_id, old_password])
+                cursor.execute("SELECT id FROM users WHERE id = %s AND password_hash = SHA2(%s, 256)",
+                               [user_id, old_password])
                 if not cursor.fetchone():
                     errors['old_password'] = ['Введён неверный пароль']
 
                 errors['new_password'] = check_password(new_password)
                 if not errors['new_password'] and not errors['new_password']:
-                    cursor.execute("UPDATE users SET password_hash = SHA2(%s, 256) WHERE id = %s", [new_password, user_id])
+                    cursor.execute("UPDATE users SET password_hash = SHA2(%s, 256) WHERE id = %s",
+                                   [new_password, user_id])
                     flash("Вы успешно сменили пароль", "susses")
                     return redirect(url_for('users'))
         except connector.errors.DatabaseError:
@@ -153,6 +155,7 @@ def change_password():
             connection.rollback()
 
     return render_template('change_password.html', errors=errors)
+
 
 @app.route('/users')
 def users():
@@ -178,16 +181,18 @@ def users_new():
             return render_template(
                 'users_new.html',
                 user_data=user_data,
-                roles=get_roles()
+                roles=get_roles(),
+                errors=errors
             )
         connection = db_connector.connect()
         try:
 
             with connection.cursor(named_tuple=True) as cursor:
+                print(user_data)
                 cursor.execute(
                     "INSERT INTO users (login, password_hash, first_name, middle_name, last_name, role_id) VALUES "
-                    "(%(login)s, SHA2(%(password)s, 256), %(first_name)s, %(middle_name)s, %(last_name)s, %(role_id)s)",
-                    [user_data])
+                    "(%s, SHA2(%s, 256), %s, %s, %s, %s)",
+                    [user_data["login"], user_data["password"], user_data["first_name"], user_data["middle_name"], user_data["last_name"], user_data["role_id"]])
                 print(cursor.statement)
                 connection.commit()
             flash('Учетная запись успешно создана', 'success')
@@ -195,7 +200,7 @@ def users_new():
         except connector.errors.DatabaseError:
             flash('Произошла ошибка при создании записи. Проверьте, что все необходимые поля заполнены', 'danger')
             connection.rollback()
-    return render_template('users_new.html', user_data=user_data, roles=get_roles())
+    return render_template('users_new.html', user_data=user_data, roles=get_roles(), errors=errors)
 
 
 @app.route('/users/<int:user_id>')
@@ -237,16 +242,18 @@ def users_edit(user_id):
                 return redirect(url_for('users'))
         except connector.errors.DatabaseError:
             flash('Произошла ошибка при изменении записи.', 'danger')
+    print(user_data)
     return render_template('users_edit.html', user_data=user_data, roles=get_roles())
 
 
-@app.route('/users/<int:user_id>/delete', methods=['POST'])
+@app.route('/users/<int:user_id>/delete')
 @login_required
 def users_delete(user_id):
     connection = db_connector.connect()
     try:
         with connection.cursor(named_tuple=True, buffered=True) as cursor:
             cursor.execute("DELETE FROM users WHERE id = %s", [user_id])
+            connection.commit()
             flash('Учетная запись успешно удалена', 'success')
             return redirect(url_for('users'))
     except connector.errors.DatabaseError:
