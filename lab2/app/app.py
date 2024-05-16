@@ -38,21 +38,28 @@ def phone():
     if request.method == 'GET':
         return render_template('phone.html')
 
-    formatted_phone_number = phone_number = request.form.get('phone_number')
-    replace_array = {'+', ' ', '(', ')', '-', '.'}
-    phone_number = ''.join([char for char in phone_number if char not in replace_array])
+    to_replace_array = {'+', ' ', '(', ')', '-', '.'}
+
+    original_phone = request.form.get('phone_number')
+    original_phone_without_symbols = ""
+
+    for i in original_phone:
+        if i not in to_replace_array:
+            original_phone_without_symbols += i
 
     errors = []
 
-    if not phone_number.isdigit():
+    if not original_phone_without_symbols.isdigit():
         errors.append('В номере телефона встречаются недопустимые символы.')
-    if len(phone_number) not in [10, 11]:
+    elif len(original_phone_without_symbols) not in [10, 11]:
         errors.append('Неверное количество цифр.')
 
     if not errors:
-        formatted_phone_number = f'8-{phone_number[-10:-7]}-{phone_number[-7:-4]}-{phone_number[-4:-2]}-{phone_number[-2:]}'
+        formatted_phone = f'8-{original_phone_without_symbols[-10:-7]}-{original_phone_without_symbols[-7:-4]}-{original_phone_without_symbols[-4:-2]}-{original_phone_without_symbols[-2:]}'
+    else:
+        formatted_phone = original_phone
 
-    return render_template('phone.html', phone_number=formatted_phone_number, errors=errors)
+    return render_template('phone.html', phone_number=formatted_phone, errors=errors)
 
 
 if __name__ == '__main__':

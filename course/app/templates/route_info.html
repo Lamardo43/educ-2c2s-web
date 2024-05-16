@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+    <h1 class="modal-title fs-5 pt-3" id="title">Информация о маршруте</h1>
+
+    <div class="table-responsive fs-6">
+        <table class="table table-bordered" id="myTable">
+            <tr>
+                <th class="table-warning">Id</th>
+                <td id="IDValue">{{ route_info.id }}</td>
+            </tr>
+            <tr>
+                <th class="table-warning">Основные места</th>
+                <td id="placesValue">{{ route_info.route.replace('&', ' - ') }}</td>
+            </tr>
+            <tr>
+                <th class="table-warning">Гид</th>
+                <td id="guide">{{ route_info.firstname + " " + route_info.lastname + " " + route_info.middlename }}</td>
+            </tr>
+            <tr>
+                <th class="table-warning">Продолжительность (часов)</th>
+                <td id="duration">{{ route_info.duration }}</td>
+            </tr>
+            <tr>
+                <th class="table-warning">Цена за человека</th>
+                <td id="price_per_person">{{ route_info.price_per_person }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div>
+        <form>
+            <div class="position-relative">
+                <label class="form-label" for="inputFIO">
+                    Введите ФИО*
+                </label>
+                <input class="form-control" id="inputFIO" placeholder="Иванов Иван Иванович" required
+                       type="text"/>
+            </div>
+
+            <div class="position-relative">
+                <label class="form-label" for="inputDate">
+                    Введите дату экскурсии*
+                </label>
+                <input class="form-control" id="inputDate" placeholder="YYYY-MM-DD" required
+                       type="date"/>
+            </div>
+
+            <div class="position-relative">
+                <label class="form-label" for="inputTime">
+                    Введите время начала*
+                </label>
+                <input class="form-control" id="inputTime" placeholder="17:00" required type="time"/>
+            </div>
+
+            <div class="position-relative">
+                <label class="form-label" for="selectorPersonCount">
+                    Выберите количество персон*
+                </label>
+                <select aria-label="Default select example" class="form-select"
+                        id="selectorPersonCount">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                    <option value="11">11</option>
+                    <option value="12">12</option>
+                    <option value="13">13</option>
+                    <option value="14">14</option>
+                    <option value="15">15</option>
+                    <option value="16">16</option>
+                    <option value="17">17</option>
+                    <option value="18">18</option>
+                    <option value="19">19</option>
+                    <option value="20">20</option>
+                </select>
+            </div>
+
+            <div class="position-relative">
+                <label class="form-label" for="selectorDuration">
+                    Выберите продолжительность (в
+                    часах)*
+                </label>
+                <select aria-label="Default select example" class="form-select" id="selectorDuration">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                </select>
+            </div>
+
+            <div class="position-relative">
+                <label class="form-label" for="inputStudId">
+                    Введите номер вашего студенческого
+                    билета
+                </label>
+                <input class="form-control" id="inputStudId" placeholder="1234567" required
+                       type="text"/>
+            </div>
+
+            <div class="position-relative">
+                <div class="d-flex f-direction-row align-items-center mt-2">
+                    <input class="me-2" id="checkboxOption1" name="checkboxGroup" type="checkbox"/>
+                    <label class="form-label mb-0" for="checkboxOption1">
+                        Использовать скидку для школьников
+                        и студентов?
+                    </label
+                    >
+                </div>
+
+                <div class="d-flex f-direction-row align-items-center mt-3">
+                    <input class="me-2" id="checkboxOption2" name="checkboxGroup" type="checkbox"/>
+                    <label class="form-label mb-0" for="checkboxOption2">
+                        Добавить легкие закуски и горячие
+                        напитки во время экскурсии?
+                    </label>
+                </div>
+            </div>
+
+            <p class="text-body-secondary">
+                Поля, помеченные "*" обязательны для
+                заполнения
+            </p>
+        </form>
+
+        <hr/>
+        <h1 class="modal-title fs-5" id="price">
+            Стоимость
+        </h1>
+        <div>
+            Итоговая стоимость:
+            <div id="totalPrice"></div>
+        </div>
+    </div>
+
+    <button class="btn btn-secondary" data-bs-dismiss="modal" type="button">
+        Закрыть
+    </button>
+    <button class="btn btn-warning" id="getWithdraw" type="button">
+        Забронировать
+    </button>
+
+{% endblock %}

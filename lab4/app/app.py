@@ -114,7 +114,7 @@ def auth():
 @app.route('/logout')
 def logout():
     logout_user()
-    return redirect(url_for('index'))
+    return redirect(url_for('auth'))
 
 
 @app.route('/counter')
@@ -260,12 +260,5 @@ def users_delete(user_id):
         flash("Произошла ошибка при удалении записи.", "danger")
         connection.rollback()
 
-
-# python -m venv ve
-# . ve/bin/activate -- Linux
-# ve\Scripts\activate -- Windows
-# pip install flask python-dotenv
-# cd app
-# flask run
 if __name__ == '__main__':
     app.run(debug=True)
