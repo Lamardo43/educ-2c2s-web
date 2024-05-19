@@ -58,6 +58,12 @@ def check_password(password):
         errors.append("Пароль должен содержать хотя бы один специальный символ")
     return errors
 
+def validate_name(name):
+    errors = []
+    if name is None or len(name) == 0:
+        errors.append("Имя не должно быть пустым")
+
+    return errors
 
 def get_roles():
     result = []
@@ -148,7 +154,7 @@ def change_password():
                 if not errors['new_password'] and not errors['new_password']:
                     cursor.execute("UPDATE users SET password_hash = SHA2(%s, 256) WHERE id = %s",
                                    [new_password, user_id])
-                    flash("Вы успешно сменили пароль", "susses")
+                    flash("Вы успешно сменили пароль", "success")
                     return redirect(url_for('users'))
         except connector.errors.DatabaseError:
             flash('Произошла ошибка при создании записи. Проверьте, что все необходимые поля заполнены', 'danger')
@@ -176,6 +182,8 @@ def users_new():
         user_data = {field: request.form[field] or None for field in fields}
         errors['login'] = check_login(user_data['login'])
         errors['password'] = check_password(user_data['password'])
+        errors['first_name'] = validate_name(user_data['first_name'])
+        errors['last_name'] = validate_name(user_data['last_name'])
 
         if errors['login'] or errors['password']:
             return render_template(
@@ -215,11 +223,11 @@ def users_view(user_id):
         user_role = cursor.fetchone()
     return render_template('users_view.html', user_data=user_data, user_role=user_role.name)
 
-
 @app.route('/users/<int:user_id>/edit', methods=['POST', 'GET'])
 @login_required
 def users_edit(user_id):
     user_data = {}
+    errors = {}
     with db_connector.connect().cursor(named_tuple=True, buffered=True) as cursor:
         cursor.execute("SELECT first_name, middle_name, last_name, role_id FROM users WHERE id = %s",
                        [user_id])
@@ -227,23 +235,37 @@ def users_edit(user_id):
         if user_data is None:
             flash('Пользователя нет в базе данных', 'danger')
             return redirect(url_for('users'))
+
     if request.method == 'POST':
         fields = ('first_name', 'middle_name', 'last_name', 'role_id')
         user_data = {field: request.form[field] or None for field in fields}
+        errors['first_name'] = validate_name(user_data['first_name'])
+        errors['last_name'] = validate_name(user_data['last_name'])
+        if errors['first_name'] or errors['last_name']:
+            return render_template(
+                'users_edit.html',
+                user_data=user_data,
+                roles=get_roles(),
+                errors=errors
+            )
         user_data['id'] = user_id
+
         try:
-            with db_connector.connect().cursor(named_tuple=True, buffered=True) as cursor:
-                cursor.execute(
-                    "UPDATE users SET first_name = %(first_name)s, "
-                    "middle_name = %(middle_name)s, last_name = %(last_name)s, "
-                    "role_id = %(role_id)s WHERE id = %(id)s",
-                    [user_data])
-                flash('Учетная запись успешно изменена', 'success')
-                return redirect(url_for('users'))
-        except connector.errors.DatabaseError:
-            flash('Произошла ошибка при изменении записи.', 'danger')
-    print(user_data)
-    return render_template('users_edit.html', user_data=user_data, roles=get_roles())
+            with db_connector.connect() as conn:
+                with conn.cursor(named_tuple=True, buffered=True) as cursor:
+                    cursor.execute(
+                        "UPDATE users SET first_name = %(first_name)s, "
+                        "middle_name = %(middle_name)s, last_name = %(last_name)s, "
+                        "role_id = %(role_id)s WHERE id = %(id)s",
+                        user_data)
+                conn.commit()
+            flash('Учетная запись успешно изменена', 'success')
+            return redirect(url_for('users'))
+        except connector.errors.DatabaseError as e:
+            flash('Произошла ошибка при изменении записи: {}'.format(e), 'danger')
+
+    return render_template('users_edit.html', user_data=user_data, roles=get_roles(), errors=errors)
+
 
 
 @app.route('/users/<int:user_id>/delete')

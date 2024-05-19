@@ -6,6 +6,7 @@ from functools import wraps
 from mysqldb import DBConnector
 import mysql.connector as connector
 import re
+import urllib
 
 app = Flask(__name__)
 application = app
@@ -20,6 +21,8 @@ login_manager.login_message = 'Авторизуйтесь для доступа 
 login_manager.login_message_category = 'warning'
 
 per_page_count = 7
+
+
 class User(UserMixin):
     def __init__(self, user_id, user_login):
         self.id = user_id
@@ -59,6 +62,8 @@ def check_password(password):
     if not re.search(r"[~!@#$%^&*_\-+=()\[\]{}><\\/|\"'.,:;]", password):
         errors.append("Пароль должен содержать хотя бы один специальный символ")
     return errors
+
+
 def get_roles():
     result = []
     with db_connector.connect().cursor(named_tuple=True) as cursor:
@@ -66,18 +71,41 @@ def get_roles():
         result = cursor.fetchall()
     return result
 
+
 def get_route_info(route_id):
     result = []
     with db_connector.connect().cursor(named_tuple=True) as cursor:
-        cursor.execute("SELECT routes.id, route, duration, price_per_person, firstname, lastname, middlename FROM routes left join users on (users.id = routes.guide_id) WHERE routes.id = %s", [route_id])
+        cursor.execute(
+            "SELECT routes.id, route, duration, price_per_person, firstname, lastname, middlename FROM routes left join users on (users.id = routes.guide_id) WHERE routes.id = %s",
+            [route_id])
         result = cursor.fetchone()
     return result
-def get_routes():
+
+
+def get_routes(contains="-3"):
     result = []
     with db_connector.connect().cursor(named_tuple=True) as cursor:
-        cursor.execute("SELECT routes.id, route, duration, price_per_person, firstname, lastname, middlename FROM routes left join users on (users.id = routes.guide_id)")
+        if contains == "-3":
+            cursor.execute("SELECT routes.id, route, duration, price_per_person, firstname, lastname, middlename "
+                           "FROM routes left join users on (users.id = routes.guide_id)")
+        else:
+            cursor.execute("SELECT routes.id, route, duration, price_per_person, firstname, lastname, middlename "
+                           "FROM routes LEFT JOIN users ON users.id = routes.guide_id "
+                           "WHERE route LIKE %s", ('%' + contains + '%',))
         result = list(enumerate(cursor.fetchall(), start=1))
     return result
+
+
+def get_selector_values():
+    result = set()
+    temp = get_routes()
+
+    for i in temp:
+        route_parts = i[1].route.split("&")
+        result.update(route_parts)
+
+    return sorted(result)
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -93,10 +121,17 @@ def load_user(user_id):
 def index():
     return redirect(url_for('index_2', page=1))
 
+
 @app.route('/<int:page>')
 def index_2(page):
-    routes=get_routes()
-    return render_template('index.html', routes=routes, page=page, per_page_count=per_page_count,total_count=math.ceil(len(routes)/per_page_count))
+    selected = request.args.get('selected')
+    if selected is not None:
+        routes = get_routes(selected)
+    else:
+        routes = get_routes()
+    return render_template('index.html', routes=routes, page=page, per_page_count=per_page_count,
+                           total_count=math.ceil(len(routes) / per_page_count), selector_values=get_selector_values(), selected=selected)
+
 
 @app.route('/auth', methods=['POST', 'GET'])
 def auth():
@@ -125,10 +160,12 @@ def auth():
 def route(route_id):
     return render_template("route_info.html", route_info=get_route_info(route_id))
 
+
 @app.route('/logout')
 def logout():
     logout_user()
     return redirect(url_for('auth'))
+
 
 if __name__ == '__main__':
     app.run(debug=True)

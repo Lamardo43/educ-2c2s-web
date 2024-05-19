@@ -24,6 +24,7 @@ class User(UserMixin):
 def get_users():
     return [
         {"user_id": "1", "login": "admin", "password": "1234"},
+        {"user_id": "2", "login": "admin1", "password": "Q1w2e3r4t5!"},
     ]
 
 
