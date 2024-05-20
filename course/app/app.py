@@ -1,6 +1,6 @@
 import math
 
-from flask import Flask, render_template, session, request, redirect, url_for, flash
+from flask import Flask, render_template, session, request, redirect, url_for, flash, current_app
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required
 from functools import wraps
 from mysqldb import DBConnector
@@ -24,9 +24,13 @@ per_page_count = 7
 
 
 class User(UserMixin):
-    def __init__(self, user_id, user_login):
+    def __init__(self, user_id, user_login, user_role):
         self.id = user_id
-        self.user_login = user_login
+        self.login = user_login
+        self.role = user_role
+
+    def is_guide(self):
+        return self.role == current_app.config['GUIDE_ROLE_NAME']
 
 
 def check_for_login(function):
@@ -72,15 +76,54 @@ def get_roles():
     return result
 
 
+def get_orders_by_user(user_id, role):
+    result = []
+    with db_connector.connect().cursor(named_tuple=True) as cursor:
+        base_query = ("SELECT orders.id AS order_id, orders.user_id AS order_user_id, orders.order_date AS order_date, "
+                      "orders.route_id AS order_route_id, orders.person_count AS order_person_count, "
+                      "orders.total_price AS order_total_price, routes.id AS route_id, routes.route, "
+                      "routes.guide_id, routes.duration, routes.price_per_person, users.id AS user_id, "
+                      "users.role, users.firstname, users.lastname, users.middlename, users.login, "
+                      "users.password_hash FROM orders LEFT JOIN routes ON orders.route_id = routes.id "
+                      "LEFT JOIN users ON routes.guide_id = users.id ")
+        if role == current_app.config['GUIDE_ROLE_NAME']:
+            cursor.execute(
+                base_query + "WHERE users.id = %s;",
+                (user_id,))
+
+            result = cursor.fetchall()
+        elif role == current_app.config['TOURIST_ROLE_NAME']:
+            cursor.execute(
+                base_query + "WHERE orders.user_id = %s;",
+                (user_id,))
+            result = cursor.fetchall()
+    return result
+
+
 def get_route_info(route_id):
     result = []
     with db_connector.connect().cursor(named_tuple=True) as cursor:
         cursor.execute(
-            "SELECT routes.id, route, duration, price_per_person, firstname, lastname, middlename FROM routes left join users on (users.id = routes.guide_id) WHERE routes.id = %s",
+            "SELECT routes.id, route, duration, price_per_person, firstname, lastname, middlename "
+            "FROM routes left join users on (users.id = routes.guide_id) WHERE routes.id = %s",
             [route_id])
         result = cursor.fetchone()
     return result
 
+def get_order_info(order_id):
+    result = []
+    with db_connector.connect().cursor(named_tuple=True) as cursor:
+        base_query = ("SELECT orders.id AS order_id, orders.user_id AS order_user_id, orders.order_date AS order_date, "
+                      "orders.route_id AS order_route_id, orders.person_count AS order_person_count, "
+                      "orders.total_price AS order_total_price, routes.id AS route_id, routes.route, "
+                      "routes.guide_id, routes.duration, routes.price_per_person, users.id AS user_id, "
+                      "users.role, users.firstname, users.lastname, users.middlename, users.login, "
+                      "users.password_hash FROM orders LEFT JOIN routes ON orders.route_id = routes.id "
+                      "LEFT JOIN users ON routes.guide_id = users.id ")
+        cursor.execute(base_query + "WHERE orders.id = %s",
+                       [order_id])
+        result = cursor.fetchone()
+    return result
 
 def get_routes(contains="-3"):
     result = []
@@ -110,10 +153,10 @@ def get_selector_values():
 @login_manager.user_loader
 def load_user(user_id):
     with db_connector.connect().cursor(named_tuple=True) as cursor:
-        cursor.execute("SELECT id, login FROM users WHERE id = %s;", [user_id])
+        cursor.execute("SELECT id, login, role FROM users WHERE id = %s;", [user_id])
         user = cursor.fetchone()
     if user is not None:
-        return User(user.id, user.login)
+        return User(user.id, user.login, user.role)
     return None
 
 
@@ -130,7 +173,8 @@ def index_2(page):
     else:
         routes = get_routes()
     return render_template('index.html', routes=routes, page=page, per_page_count=per_page_count,
-                           total_count=math.ceil(len(routes) / per_page_count), selector_values=get_selector_values(), selected=selected)
+                           total_count=math.ceil(len(routes) / per_page_count), selector_values=get_selector_values(),
+                           selected=selected)
 
 
 @app.route('/auth', methods=['POST', 'GET'])
@@ -142,14 +186,14 @@ def auth():
         remember_me = request.form.get('remember_me', None) == 'on'
         with db_connector.connect().cursor(named_tuple=True, buffered=True) as cursor:
             print(login)
-            cursor.execute("SELECT id, login FROM users WHERE login = %s AND password_hash = SHA2(%s, 256)",
+            cursor.execute("SELECT id, login, role FROM users WHERE login = %s AND password_hash = SHA2(%s, 256)",
                            [login, password])
             print(cursor.statement)
             user = cursor.fetchone()
 
         if user is not None:
             flash('Авторизация прошла успешно', 'success')
-            login_user(User(user.id, user.login), remember=remember_me)
+            login_user(User(user.id, user.login, user.role), remember=remember_me)
             next_url = request.args.get('next', url_for('index'))
             return redirect(next_url)
         flash('Invalid username or password', 'danger')
@@ -159,6 +203,35 @@ def auth():
 @app.route('/route/<int:route_id>')
 def route(route_id):
     return render_template("route_info.html", route_info=get_route_info(route_id))
+
+@app.route('/order/<int:order_id>')
+@login_required
+def order(order_id):
+    return render_template("order_info.html", order_info=get_order_info(order_id))
+
+@app.route('/order/<int:order_id>/delete')
+@login_required
+def delete_confirm(order_id):
+    return render_template("order_delete.html", order_id=order_id)
+
+@app.route('/delete/<int:order_id>')
+@login_required
+def delete_order(order_id):
+    connection = db_connector.connect()
+    try:
+        with connection.cursor(named_tuple=True, buffered=True) as cursor:
+            cursor.execute("DELETE FROM orders WHERE id = %s", [order_id])
+            connection.commit()
+            flash('Заказ успешно удален', 'success')
+    except connector.errors.DatabaseError:
+        flash("Произошла ошибка при удалении заказа.", "danger")
+        connection.rollback()
+    return redirect(url_for('account'))
+
+@app.route('/account')
+@login_required
+def account():
+    return render_template("account.html", orders=get_orders_by_user(current_user.id, current_user.role))
 
 
 @app.route('/logout')

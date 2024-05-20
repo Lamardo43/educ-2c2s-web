@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <nav class="navbar navbar-expand-lg bg-black fixed-top">
+        <div class="container-fluid">
+            <a class="text-warning navbar-brand fw-bolder" href="{{ url_for('index') }}">
+                <i class="bi bi-stripe"></i>
+                Trip2Strip
+            </a>
+            <a class="btn btn-warning text-black fs-5" href="{{ url_for('account') }}">
+                <i class="bi bi-arrow-left-short"></i>
+                Назад
+            </a>
+
+            <button aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"
+                    class="navbar-toggler"
+                    data-bs-target="#navbarSupportedContent" data-bs-toggle="collapse" type="button">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="text-white nav-link" href="#footer">Связаться с нами</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+{% endblock %}
+
+{% block content %}
+
+
+    <div class="d-flex justify-content-center align-items-center vh-100">
+        <div class="border p-4 bg-white">
+            <h1 class="modal-title fs-5 pt-3" id="title">Вы уверены, что хотите удалить заказ #{{ order_id }}?</h1>
+            <div class="d-flex justify-content-between pt-3">
+                <a class="btn btn-warning w-50 m-2" href="{{ url_for('account') }}">Нет</a>
+                <a class="btn btn-danger w-50 m-2" href="{{ url_for('delete_order', order_id=order_id) }}">Да</a>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

@@ -111,43 +111,45 @@
 </head>
 <body class="d-flex flex-column min-vh-100">
 <header>
-    <nav class="navbar navbar-expand-lg bg-black fixed-top">
-        <div class="container-fluid">
-            <a class="text-warning navbar-brand fw-bolder" href="{{ url_for('index') }}">
-                <i class="bi bi-stripe"></i>
-                Trip2Strip
-            </a>
-
-            <button aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"
-                    class="navbar-toggler"
-                    data-bs-target="#navbarSupportedContent" data-bs-toggle="collapse" type="button">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-
-            <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item">
-                        <a class="text-white nav-link" href="#aboutCompany">О компании</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="text-white nav-link" href="#ourPluses">Наши преимущества</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="text-white nav-link" href="#excursions">Выбор экскурсии</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="text-white nav-link" href="#footer">Связаться с нами</a>
-                    </li>
-
-
-                </ul>
-                <a class="btn btn-warning text-black fs-5" href="">
-                    <i class="bi bi-person-fill"></i>
-                    Личный кабинет
+    {% block header %}
+        <nav class="navbar navbar-expand-lg bg-black fixed-top">
+            <div class="container-fluid">
+                <a class="text-warning navbar-brand fw-bolder" href="{{ url_for('index') }}">
+                    <i class="bi bi-stripe"></i>
+                    Trip2Strip
                 </a>
+
+                <button aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"
+                        class="navbar-toggler"
+                        data-bs-target="#navbarSupportedContent" data-bs-toggle="collapse" type="button">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                        <li class="nav-item">
+                            <a class="text-white nav-link" href="#aboutCompany">О компании</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="text-white nav-link" href="#ourPluses">Наши преимущества</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="text-white nav-link" href="#excursions">Выбор экскурсии</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="text-white nav-link" href="#footer">Связаться с нами</a>
+                        </li>
+
+
+                    </ul>
+                    <a class="btn btn-warning text-black fs-5" href="{{ url_for('account') }}">
+                        <i class="bi bi-person-fill"></i>
+                        Личный кабинет
+                    </a>
+                </div>
             </div>
-        </div>
-    </nav>
+        </nav>
+    {% endblock %}
 </header>
 
 <main class="container py-5">
@@ -163,7 +165,7 @@
 </main>
 
 
-<footer class="footer bg-black text-white py-3 align-items-center mt-3" id="footer">
+<footer class="footer bg-black text-white py-3 align-items-center mt-auto" id="footer">
     <div class="container row mx-auto align-items-center">
 
         <div class="container col-lg-6 p-4">

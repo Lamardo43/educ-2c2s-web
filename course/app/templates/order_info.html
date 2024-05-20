@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <nav class="navbar navbar-expand-lg bg-black fixed-top">
+        <div class="container-fluid">
+            <a class="text-warning navbar-brand fw-bolder" href="{{ url_for('index') }}">
+                <i class="bi bi-stripe"></i>
+                Trip2Strip
+            </a>
+            <a class="btn btn-warning text-black fs-5" href="{{ url_for('account') }}">
+                <i class="bi bi-arrow-left-short"></i>
+                Назад
+            </a>
+
+            <button aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"
+                    class="navbar-toggler"
+                    data-bs-target="#navbarSupportedContent" data-bs-toggle="collapse" type="button">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="text-white nav-link" href="#footer">Связаться с нами</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+{% endblock %}
+
+{% block content %}
+
+    <h1 class="modal-title fs-5 pt-3" id="title">Информация о заказе</h1>
+
+    <div class="table-responsive fs-6">
+        <table class="table table-bordered" id="myTable">
+            <tr>
+                <th class="table-warning">Id заказа</th>
+                <td id="IDValue">{{ order_info.order_id }}</td>
+            </tr>
+            <tr>
+                <th class="table-warning">Дата</th>
+                <td id="duration">{{ order_info.order_date }}</td>
+            </tr>
+            <tr>
+                <th class="table-warning">Основные места</th>
+                <td id="placesValue">{{ order_info.route.replace('&', ' - ') }}</td>
+            </tr>
+            <tr>
+                <th class="table-warning">Гид</th>
+                <td id="guide">{{ order_info.firstname + " " + order_info.lastname + " " + order_info.middlename }}</td>
+            </tr>
+            <tr>
+                <th class="table-warning">Продолжительность (часов)</th>
+                <td id="duration">{{ order_info.duration }}</td>
+            </tr>
+            <tr>
+                <th class="table-warning">Количество персон</th>
+                <td id="duration">{{ order_info.order_person_count }}</td>
+            </tr>
+            <tr>
+                <th class="table-warning">Стоимость</th>
+                <td id="price_per_person">{{ order_info.order_total_price }}</td>
+            </tr>
+        </table>
+    </div>
+
+
+{% endblock %}
