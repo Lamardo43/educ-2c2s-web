@@ -28,7 +28,7 @@
                         <a class="text-white nav-link" href="#footer">Связаться с нами</a>
                     </li>
                 </ul>
-                <a class="btn btn-warning text-black fs-5" href="{{ url_for('account') }}">
+                <a class="btn btn-warning text-black fs-5" href="{{ url_for('logout') }}">
                     <i class="bi bi-box-arrow-left"></i>
                     Выход
                 </a>
@@ -39,6 +39,7 @@
 
 {% block content %}
     <div class="container mt-5 table-responsive flex-grow-1">
+    <div>Ваша роль: {{ current_user.role }}</div>
         <h2 id="title">Текущие заказы</h2>
 
         <table class="table table-bordered" id="ordersTable">
@@ -46,7 +47,9 @@
             <tr>
                 <th class="table-warning">#</th>
                 <th class="table-warning">Id</th>
+                <th class="table-warning">Название экскурсии</th>
                 <th class="table-warning">Дата</th>
+                <th class="table-warning">Продолжительность</th>
                 <th class="table-warning">Стоимость</th>
                 <th class="table-warning">Управление</th>
             </tr>
@@ -56,7 +59,9 @@
                 <tr>
                     <td> {{ loop.index }} </td>
                     <td> {{ order.order_id }} </td>
+                    <td> {{ order.name }} </td>
                     <td> {{ order.order_date }} </td>
+                    <td> {{ order.duration }} </td>
                     <td> {{ order.order_total_price }} </td>
                     <td>
                         <a class="btn btn-warning"
@@ -64,11 +69,11 @@
                             <i class="bi bi-eye-fill"></i>
                         </a>
                         <a class="btn btn-warning"
-                           href="{{ url_for('order', order_id=order.order_id) }}">
+                           href="{{ url_for('order_edit', order_id=order.order_id) }}">
                             <i class="bi bi-pencil-fill"></i>
                         </a>
                         <a class="btn btn-danger"
-                           href="{{ url_for('delete_confirm', order_id=order.order_id) }}">
+                           href="{{ url_for('order_delete', order_id=order.order_id) }}">
                             <i class="bi bi-trash3-fill"></i>
                         </a>
                     </td>

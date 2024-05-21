@@ -6,11 +6,11 @@
         <div class="d-flex flex-column gap-2 w-50 text-black">
             <h2>Коротко о нас</h2>
             <p class="text-justify">
-                Добро пожаловать в Trip2Strip - ваш проводник в увлекательном мире Москвы! Организуем незабываемые
+                Добро пожаловать в tripTWOStrip - ваш проводник в увлекательном мире Москвы! Организуем незабываемые
                 экскурсии
-                по истории и красотам столицы. Путеводители Trip2Strip готовы показать вам самые интересные места,
+                по истории и красотам столицы. Путеводители tripTWOStrip готовы показать вам самые интересные места,
                 создавая
-                неповторимые впечатления от города. Присоединяйтесь к нам и открывайте Москву вместе с Trip2Strip!</p>
+                неповторимые впечатления от города. Присоединяйтесь к нам и открывайте Москву вместе с tripTWOStrip!</p>
         </div>
         <img alt="" class="w-50 rounded-5" src="{{ url_for('static', filename='images/moscow.jpg') }}">
     </div>
@@ -22,7 +22,7 @@
                 <div class="col-12 col-md-6 col-lg-4 rounded-4 ">
                     <i class="bi bi-map fs-2"></i>
                     <h4>Уникальные Маршруты</h4>
-                    <p>Trip2Strip предлагает эксклюзивные маршруты по Москве, позволяя вам открыть для себя неизведанные
+                    <p>tripTWOStrip предлагает эксклюзивные маршруты по Москве, позволяя вам открыть для себя неизведанные
                         уголки
                         города.</p>
                 </div>
@@ -121,9 +121,9 @@
             <thead>
             <tr>
                 <th class="table-warning">Id</th>
+                <th class="table-warning">Название</th>
                 <th class="table-warning">Основные места</th>
                 <th class="table-warning">Гид</th>
-                <th class="table-warning">Продолжительность (часов)</th>
                 <th class="table-warning">Цена за человека</th>
                 <th class="table-warning"></th>
             </tr>
@@ -134,9 +134,9 @@
                 {% if (route[0] >= per_page_count * (page - 1)) and (route[0] < per_page_count * page) %}
                     <tr>
                         <td> {{ loop.index }} </td>
+                        <td> {{ route[1].name }} </td>
                         <td> {{ route[1].route.replace("&", " - ") }} </td>
                         <td> {{ route[1].firstname + " " + route[1].lastname + " " + route[1].middlename }} </td>
-                        <td> {{ route[1].duration }} </td>
                         <td> {{ route[1].price_per_person }} </td>
                         <td>
                             <a class="btn btn-primary"

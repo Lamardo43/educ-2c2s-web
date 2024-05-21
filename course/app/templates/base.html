@@ -87,7 +87,7 @@
             {% if title %}
                 {{ title }}
             {% else %}
-                trip2Strip
+                tripTWOStrip
             {% endif %}
         </title>
         <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
@@ -116,7 +116,7 @@
             <div class="container-fluid">
                 <a class="text-warning navbar-brand fw-bolder" href="{{ url_for('index') }}">
                     <i class="bi bi-stripe"></i>
-                    Trip2Strip
+                    tripTWOStrip
                 </a>
 
                 <button aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"
@@ -152,7 +152,7 @@
     {% endblock %}
 </header>
 
-<main class="container py-5">
+<main class="container my-5 pt-4">
     <div class="alerts">
         {% for category, message in get_flashed_messages(True) %}
             <div class="alert alert-{{ category }}" role="alert">

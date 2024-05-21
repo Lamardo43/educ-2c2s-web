@@ -5,7 +5,7 @@
         <div class="container-fluid">
             <a class="text-warning navbar-brand fw-bolder" href="{{ url_for('index') }}">
                 <i class="bi bi-stripe"></i>
-                Trip2Strip
+                tripTWOStrip
             </a>
             <a class="btn btn-warning text-black fs-5" href="{{ url_for('account') }}">
                 <i class="bi bi-arrow-left-short"></i>
@@ -44,11 +44,16 @@
                 <td id="duration">{{ order_info.order_date }}</td>
             </tr>
             <tr>
+                <th class="table-warning">Название экскурсии</th>
+                <td id="duration">{{ order_info.name }}</td>
+            </tr>
+            <tr>
                 <th class="table-warning">Основные места</th>
                 <td id="placesValue">{{ order_info.route.replace('&', ' - ') }}</td>
             </tr>
             <tr>
-                <th class="table-warning">Гид</th>
+                <th class="table-warning">
+                    {% if current_user.is_guide() %}Имя заказчика{% else %}Имя гида{% endif %}</th>
                 <td id="guide">{{ order_info.firstname + " " + order_info.lastname + " " + order_info.middlename }}</td>
             </tr>
             <tr>

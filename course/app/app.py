@@ -1,4 +1,5 @@
 import math
+from datetime import datetime, time
 
 from flask import Flask, render_template, session, request, redirect, url_for, flash, current_app
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required
@@ -79,10 +80,10 @@ def get_roles():
 def get_orders_by_user(user_id, role):
     result = []
     with db_connector.connect().cursor(named_tuple=True) as cursor:
-        base_query = ("SELECT orders.id AS order_id, orders.user_id AS order_user_id, orders.order_date AS order_date, "
+        base_query = ("SELECT orders.id AS order_id, orders.duration, orders.user_id AS order_user_id, orders.order_date AS order_date, "
                       "orders.route_id AS order_route_id, orders.person_count AS order_person_count, "
-                      "orders.total_price AS order_total_price, routes.id AS route_id, routes.route, "
-                      "routes.guide_id, routes.duration, routes.price_per_person, users.id AS user_id, "
+                      "orders.total_price AS order_total_price, routes.name, routes.id AS route_id, routes.route, "
+                      "routes.guide_id, routes.price_per_person, users.id AS user_id, "
                       "users.role, users.firstname, users.lastname, users.middlename, users.login, "
                       "users.password_hash FROM orders LEFT JOIN routes ON orders.route_id = routes.id "
                       "LEFT JOIN users ON routes.guide_id = users.id ")
@@ -104,35 +105,44 @@ def get_route_info(route_id):
     result = []
     with db_connector.connect().cursor(named_tuple=True) as cursor:
         cursor.execute(
-            "SELECT routes.id, route, duration, price_per_person, firstname, lastname, middlename "
+            "SELECT routes.id, route, price_per_person, name, firstname, lastname, middlename "
             "FROM routes left join users on (users.id = routes.guide_id) WHERE routes.id = %s",
             [route_id])
         result = cursor.fetchone()
     return result
 
-def get_order_info(order_id):
+
+def get_order_info(order_id, role):
     result = []
     with db_connector.connect().cursor(named_tuple=True) as cursor:
         base_query = ("SELECT orders.id AS order_id, orders.user_id AS order_user_id, orders.order_date AS order_date, "
-                      "orders.route_id AS order_route_id, orders.person_count AS order_person_count, "
+                      "orders.route_id AS order_route_id, orders.duration, orders.person_count AS order_person_count, "
                       "orders.total_price AS order_total_price, routes.id AS route_id, routes.route, "
-                      "routes.guide_id, routes.duration, routes.price_per_person, users.id AS user_id, "
+                      "routes.guide_id, routes.price_per_person, routes.name, users.id AS user_id, "
                       "users.role, users.firstname, users.lastname, users.middlename, users.login, "
                       "users.password_hash FROM orders LEFT JOIN routes ON orders.route_id = routes.id "
-                      "LEFT JOIN users ON routes.guide_id = users.id ")
-        cursor.execute(base_query + "WHERE orders.id = %s",
-                       [order_id])
-        result = cursor.fetchone()
+                      "LEFT JOIN users ")
+        if role == current_app.config['GUIDE_ROLE_NAME']:
+            cursor.execute(
+                base_query + "ON orders.user_id = users.id WHERE orders.id = %s",
+                (order_id,))
+            result = cursor.fetchone()
+        elif role == current_app.config['TOURIST_ROLE_NAME']:
+            cursor.execute(
+                base_query + "ON routes.guide_id = users.id WHERE orders.id = %s;",
+                (order_id,))
+            result = cursor.fetchone()
     return result
+
 
 def get_routes(contains="-3"):
     result = []
     with db_connector.connect().cursor(named_tuple=True) as cursor:
         if contains == "-3":
-            cursor.execute("SELECT routes.id, route, duration, price_per_person, firstname, lastname, middlename "
+            cursor.execute("SELECT routes.id, route, price_per_person, name, firstname, lastname, middlename "
                            "FROM routes left join users on (users.id = routes.guide_id)")
         else:
-            cursor.execute("SELECT routes.id, route, duration, price_per_person, firstname, lastname, middlename "
+            cursor.execute("SELECT routes.id, route, price_per_person, name, firstname, lastname, middlename "
                            "FROM routes LEFT JOIN users ON users.id = routes.guide_id "
                            "WHERE route LIKE %s", ('%' + contains + '%',))
         result = list(enumerate(cursor.fetchall(), start=1))
@@ -185,10 +195,8 @@ def auth():
         password = request.form['password']
         remember_me = request.form.get('remember_me', None) == 'on'
         with db_connector.connect().cursor(named_tuple=True, buffered=True) as cursor:
-            print(login)
             cursor.execute("SELECT id, login, role FROM users WHERE login = %s AND password_hash = SHA2(%s, 256)",
                            [login, password])
-            print(cursor.statement)
             user = cursor.fetchone()
 
         if user is not None:
@@ -200,44 +208,147 @@ def auth():
     return render_template('auth.html')
 
 
-@app.route('/route/<int:route_id>')
+from flask import render_template, request, redirect, url_for, flash
+from flask_login import login_required, current_user
+
+from datetime import datetime, time
+
+
+def validate_fields(fields):
+    errors = {'date': [], 'time': []}
+
+    if fields is not None:
+        input_date = datetime.strptime(fields['date'], '%Y-%m-%d').date()
+        if input_date < datetime.now().date():
+            errors['date'].append('Дата не должна быть раньше текущей.')
+        try:
+            input_time = datetime.strptime(fields['time'], '%H:%M:%S').time()
+        except ValueError:
+            input_time = datetime.strptime(fields['time'], '%H:%M').time()
+
+
+        if input_date == datetime.now().date() and input_time < datetime.now().time():
+            errors['time'].append('Время не должно быть раньше текущего.')
+
+        if not time(6, 0, 0) <= input_time <= time(23, 59, 59):
+            errors['time'].append('Время должно быть в промежутке от 06 утра до 00 ночи.')
+
+    return errors
+
+
+@app.route('/route/<int:route_id>', methods=['GET', 'POST'])
 def route(route_id):
-    return render_template("route_info.html", route_info=get_route_info(route_id))
+    if request.method == 'POST':
+        if not current_user.is_authenticated:
+            flash('Чтобы оформить заказ, нужно войти в систему.', 'danger')
+            return redirect(url_for('route', route_id=route_id))
+
+        date = request.form.get('date')
+        time = request.form.get('time')
+        person_count = request.form.get('person_count')
+        duration = request.form.get('duration')
+        total_price = request.form.get('totalPrice')
+        fields = {'date': date, 'time': time, 'person_count': person_count, 'duration': duration,
+                  'totalPrice': total_price}
+
+        errors = validate_fields(fields)
+
+        if errors['date'] or errors['time']:
+            return render_template("route_info.html", route_info=get_route_info(route_id), errors=errors,
+                                   fields=fields)
+
+        connection = db_connector.connect()
+        try:
+
+            with connection.cursor(named_tuple=True) as cursor:
+                cursor.execute(
+                    "INSERT INTO orders(user_id, route_id, person_count, total_price, order_date, duration) VALUES (%s, %s, %s, %s, %s, %s)",
+                    [current_user.id, route_id, person_count, total_price, date + " " + time, duration])
+                connection.commit()
+            flash('Заказ успешно оформлен!', 'success')
+        except connector.errors.DatabaseError as e:
+            print(e)
+            flash('Произошла ошибка при оформлении заказа.', 'danger')
+            connection.rollback()
+
+        return redirect(url_for('account'))
+
+    return render_template("route_info.html", route_info=get_route_info(route_id), errors={})
+
 
 @app.route('/order/<int:order_id>')
 @login_required
 def order(order_id):
-    return render_template("order_info.html", order_info=get_order_info(order_id))
+    return render_template("order_info.html", order_info=get_order_info(order_id, current_user.role))
 
-@app.route('/order/<int:order_id>/delete')
+@app.route('/order/<int:order_id>/edit', methods=['GET', 'POST'])
 @login_required
-def delete_confirm(order_id):
+def order_edit(order_id):
+    if request.method == 'POST':
+        if not current_user.is_authenticated:
+            flash('Чтобы оформить заказ, нужно войти в систему.', 'danger')
+            return redirect(url_for('order', order_id=order_id))
+
+        order_info_query = get_order_info(order_id, current_user.role)
+        date = request.form.get('date')
+        time = request.form.get('time')
+        person_count = request.form.get('person_count')
+        duration = request.form.get('duration')
+        total_price = request.form.get('totalPrice')
+        fields = {'date': date, 'time': time, 'person_count': person_count, 'duration': duration,
+                  'totalPrice': total_price}
+
+        errors = validate_fields(fields)
+
+        if errors['date'] or errors['time']:
+            return render_template("order_edit.html", order_info=get_order_info(order_id, current_user.role), errors=errors)
+
+        connection = db_connector.connect()
+        try:
+
+            with connection.cursor(named_tuple=True) as cursor:
+                cursor.execute(
+                    "UPDATE orders SET user_id = %s, route_id = %s, person_count = %s, total_price = %s, order_date = %s, duration = %s"
+                    "WHERE orders.id = %s", (current_user.id, order_info_query.route_id, person_count, total_price, date + " " + time, duration, order_id))
+                connection.commit()
+            flash('Заказ успешно оформлен!', 'success')
+        except connector.errors.DatabaseError as e:
+            print(e)
+            flash('Произошла ошибка при оформлении заказа.', 'danger')
+            connection.rollback()
+
+        return redirect(url_for('account'))
+
+    return render_template("order_edit.html", order_info=get_order_info(order_id, current_user.role), errors={})
+
+
+@app.route('/order/<int:order_id>/delete', methods=['GET', 'POST'])
+@login_required
+def order_delete(order_id):
+    if request.method == 'POST':
+        connection = db_connector.connect()
+        try:
+            with connection.cursor(named_tuple=True, buffered=True) as cursor:
+                cursor.execute("DELETE FROM orders WHERE id = %s", [order_id])
+                connection.commit()
+                flash('Заказ успешно удален', 'success')
+        except db_connector.errors.DatabaseError:
+            flash("Произошла ошибка при удалении заказа.", "danger")
+            connection.rollback()
+        return redirect(url_for('account'))
     return render_template("order_delete.html", order_id=order_id)
 
-@app.route('/delete/<int:order_id>')
-@login_required
-def delete_order(order_id):
-    connection = db_connector.connect()
-    try:
-        with connection.cursor(named_tuple=True, buffered=True) as cursor:
-            cursor.execute("DELETE FROM orders WHERE id = %s", [order_id])
-            connection.commit()
-            flash('Заказ успешно удален', 'success')
-    except connector.errors.DatabaseError:
-        flash("Произошла ошибка при удалении заказа.", "danger")
-        connection.rollback()
-    return redirect(url_for('account'))
 
 @app.route('/account')
 @login_required
 def account():
-    return render_template("account.html", orders=get_orders_by_user(current_user.id, current_user.role))
+    return render_template("account.html", orders=get_orders_by_user(current_user.id, current_user.role), role=current_user.role)
 
 
 @app.route('/logout')
 def logout():
     logout_user()
-    return redirect(url_for('auth'))
+    return redirect(url_for('index'))
 
 
 if __name__ == '__main__':

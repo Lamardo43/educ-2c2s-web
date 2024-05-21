@@ -7,7 +7,7 @@
                 <i class="bi bi-stripe"></i>
                 tripTWOStrip
             </a>
-            <a class="btn btn-warning text-black fs-5" href="{{ url_for('index') + '#excursions' }}">
+            <a class="btn btn-warning text-black fs-5" href="{{ url_for('account') }}">
                 <i class="bi bi-arrow-left-short"></i>
                 Назад
             </a>
@@ -24,10 +24,6 @@
                         <a class="text-white nav-link" href="#footer">Связаться с нами</a>
                     </li>
                 </ul>
-                <a class="btn btn-warning text-black fs-5" href="{{ url_for('account') }}">
-                    <i class="bi bi-person-fill"></i>
-                    Личный кабинет
-                </a>
             </div>
         </div>
     </nav>
@@ -35,49 +31,62 @@
 
 {% block content %}
 
-    <h2 class="modal-title pt-3" id="title">Информация о маршруте</h2>
+    <h1 class="modal-title fs-5 pt-3" id="title">Информация о заказе</h1>
 
     <div class="table-responsive fs-6">
         <table class="table table-bordered" id="myTable">
             <tr>
-                <th class="table-warning">Id</th>
-                <td id="IDValue">{{ route_info.id }}</td>
+                <th class="table-warning">Id заказа</th>
+                <td id="IDValue">{{ order_info.order_id }}</td>
+            </tr>
+            <tr>
+                <th class="table-warning">Дата</th>
+                <td id="duration">{{ order_info.order_date }}</td>
+            </tr>
+            <tr>
+                <th class="table-warning">Название экскурсии</th>
+                <td id="duration">{{ order_info.name }}</td>
             </tr>
             <tr>
                 <th class="table-warning">Основные места</th>
-                <td id="placesValue">{{ route_info.route.replace('&', ' - ') }}</td>
+                <td id="placesValue">{{ order_info.route.replace('&', ' - ') }}</td>
             </tr>
             <tr>
-                <th class="table-warning">Гид</th>
-                <td id="guide">{{ route_info.firstname + " " + route_info.lastname + " " + route_info.middlename }}</td>
+                <th class="table-warning">
+                    {% if current_user.is_guide() %}Имя заказчика{% else %}Имя гида{% endif %}</th>
+                <td id="guide">{{ order_info.firstname + " " + order_info.lastname + " " + order_info.middlename }}</td>
             </tr>
             <tr>
                 <th class="table-warning">Продолжительность (часов)</th>
-                <td id="duration">{{ route_info.duration }}</td>
+                <td id="duration">{{ order_info.duration }}</td>
             </tr>
             <tr>
-                <th class="table-warning">Цена за человека (в час)</th>
-                <td id="price_per_person">{{ route_info.price_per_person }}</td>
+                <th class="table-warning">Количество персон</th>
+                <td id="duration">{{ order_info.order_person_count }}</td>
+            </tr>
+            <tr>
+                <th class="table-warning">Стоимость</th>
+                <td id="price_per_person">{{ order_info.order_total_price }}</td>
             </tr>
         </table>
     </div>
 
     <div>
-        <h2>Оформление заказа</h2>
+        <h2>Изменение заказа</h2>
 
         {% if not current_user.is_authenticated %}
             <div class="alert alert-danger">
-                Чтобы оформить заказ, нужно войти в систему.
+                Чтобы изменить заказ, нужно войти в систему.
             </div>
         {% endif %}
 
-        <form method="post" action="{{ url_for('route', route_id=route_info.id) }}"
+        <form method="post" action="{{ url_for('order_edit', order_id=order_info.order_id) }}"
               class="{% if not current_user.is_authenticated %}disabled-form{% endif %}">
             <div class="position-relative">
                 <label class="form-label" for="inputDate">Введите дату экскурсии*</label>
                 <input class="form-control {% if errors.get('date') %}is-invalid{% endif %}" id="inputDate" name="date"
                        placeholder="YYYY-MM-DD" required type="date"
-                       value="{{ fields.date if fields else '' }}"
+                       value="{{ order_info.order_date.date() }}"
                        {% if not current_user.is_authenticated %}disabled{% endif %}>
                 {% if errors.get('date') %}
                     <div class="invalid-feedback">
@@ -94,7 +103,7 @@
                 <label class="form-label" for="inputTime">Введите время начала*</label>
                 <input class="form-control {% if errors.get('time') %}is-invalid{% endif %}" id="inputTime" name="time"
                        placeholder="17:00" required type="time"
-                       value="{{ fields.time if fields else '' }}"
+                       value="{{ order_info.order_date.time() }}"
                        {% if not current_user.is_authenticated %}disabled{% endif %}>
                 {% if errors.get('time') %}
                     <div class="invalid-feedback">
@@ -110,10 +119,9 @@
             <div class="position-relative">
                 <label class="form-label" for="selectorPersonCount">Выберите количество персон*</label>
                 <select aria-label="Default select example" class="form-select" id="selectorPersonCount"
-                        name="person_count"
-                        {% if not current_user.is_authenticated %}disabled{% endif %}>
+                        name="person_count" {% if not current_user.is_authenticated %}disabled{% endif %}>
                     {% for i in range(1, 21) %}
-                        <option value="{{ i }}" {% if fields and fields.person_count == i|string %}selected{% endif %}>
+                        <option value="{{ i }}" {% if order_info.order_person_count == i %}selected{% endif %}>
                             {{ i }}
                         </option>
                     {% endfor %}
@@ -124,12 +132,11 @@
                 <label class="form-label" for="selectorDuration">Выберите продолжительность (в часах)*</label>
                 <select aria-label="Default select example" class="form-select" id="selectorDuration" name="duration"
                         {% if not current_user.is_authenticated %}disabled{% endif %}>
-                    <option value="1" {% if fields and fields.duration == '1' %}selected{% endif %}>1</option>
-                    <option value="2" {% if fields and fields.duration == '2' %}selected{% endif %}>2</option>
-                    <option value="3" {% if fields and fields.duration == '3' %}selected{% endif %}>3</option>
-                    <option value="4" {% if fields and fields.duration == '4' %}selected{% endif %}>4</option>
-                    <option value="5" {% if fields and fields.duration == '5' %}selected{% endif %}>5</option>
-                    <option value="6" {% if fields and fields.duration == '6' %}selected{% endif %}>6</option>
+                    {% for i in range(1, 7) %}
+                        <option value="{{ i }}" {% if order_info.duration == i %}selected{% endif %}>
+                            {{ i }}
+                        </option>
+                    {% endfor %}
                 </select>
             </div>
 
@@ -141,15 +148,16 @@
             <h1 class="modal-title fs-5" id="price">Стоимость</h1>
             <div class="fs-5">
                 Итоговая стоимость:
-                <span id="totalPrice" class="font-weight-bold">{{ fields.totalPrice if fields else '' }}</span>
+                <span id="totalPrice" class="font-weight-bold">{{ order_info.order_total_price }}</span>
                 <input type="hidden" id="visibleTotalPrice" name="totalPrice"
-                       value="{{ fields.totalPrice if fields else '' }}">
+                       value="{{ order_info.order_total_price }}">
             </div>
 
             <script>
+                console.log("aaaaaaaaaaaaa");
                 const totalPriceElement = document.getElementById('totalPrice');
                 const visibleTotalPriceElement = document.getElementById('visibleTotalPrice');
-                const pricePerPerson = {{ route_info.price_per_person }};
+                const pricePerPerson = {{ order_info.price_per_person }};
 
                 function calculateTotalPrice() {
                     const personCount = parseInt(document.getElementById('selectorPersonCount').value);
@@ -169,7 +177,7 @@
                 Закрыть
             </a>
             <button class="btn btn-warning" type="submit" {% if not current_user.is_authenticated %}disabled{% endif %}>
-                Забронировать
+                Подтвердить
             </button>
         </form>
 
