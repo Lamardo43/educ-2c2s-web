@@ -7,7 +7,6 @@ from functools import wraps
 from mysqldb import DBConnector
 import mysql.connector as connector
 import re
-import urllib
 
 app = Flask(__name__)
 application = app
@@ -208,10 +207,7 @@ def auth():
     return render_template('auth.html')
 
 
-from flask import render_template, request, redirect, url_for, flash
-from flask_login import login_required, current_user
 
-from datetime import datetime, time
 
 
 def validate_fields(fields):

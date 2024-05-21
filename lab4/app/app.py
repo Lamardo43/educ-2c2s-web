@@ -1,7 +1,7 @@
 from flask import Flask, render_template, session, request, redirect, url_for, flash
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required
 from functools import wraps
-from mysqldb import DBConnector
+from .mysqldb import DBConnector
 import mysql.connector as connector
 import re
 
