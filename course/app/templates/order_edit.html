@@ -154,14 +154,15 @@
             </div>
 
             <script>
-                console.log("aaaaaaaaaaaaa");
                 const totalPriceElement = document.getElementById('totalPrice');
                 const visibleTotalPriceElement = document.getElementById('visibleTotalPrice');
                 const pricePerPerson = {{ order_info.price_per_person }};
 
                 function calculateTotalPrice() {
+
                     const personCount = parseInt(document.getElementById('selectorPersonCount').value);
                     const duration = parseInt(document.getElementById('selectorDuration').value);
+                    console.log(personCount, " ", duration, " ", pricePerPerson)
                     const totalPrice = personCount * duration * pricePerPerson;
                     totalPriceElement.textContent = totalPrice;
                     visibleTotalPriceElement.value = totalPrice;
