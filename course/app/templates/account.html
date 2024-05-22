@@ -39,8 +39,14 @@
 
 {% block content %}
     <div class="container mt-5 table-responsive flex-grow-1">
-    <div>Ваша роль: {{ current_user.role }}</div>
-        <h2 id="title">Текущие заказы</h2>
+        <div>Ваша роль: {{ current_user.role }}</div>
+        <div class="container my-3">
+            <div class="d-flex justify-content-between">
+                <h2 id="title">Текущие заказы</h2>
+                <a class="btn btn-warning" href="{{ url_for('export_orders') }}">Экспорт в файл</a>
+            </div>
+        </div>
+
 
         <table class="table table-bordered" id="ordersTable">
             <thead>
@@ -81,7 +87,41 @@
             {% endfor %}
             </tbody>
         </table>
+
+        {% if current_user.is_guide() %}
+
+        <div class="container my-3">
+            <div class="d-flex justify-content-between">
+                <h2 id="title">Текущие маршруты</h2>
+                <a class="btn btn-warning" href="{{ url_for('export_routes') }}">Экспорт в файл</a>
+            </div>
+        </div>
+
+
+        <table class="table table-bordered" id="routesTable">
+            <thead>
+            <tr>
+                <th class="table-warning">Id</th>
+                <th class="table-warning">Название</th>
+                <th class="table-warning">Основные места</th>
+                <th class="table-warning">Цена за человека</th>
+            </tr>
+            </thead>
+            <tbody id="ordersTableBody">
+            {% for route in routes %}
+                <tr>
+                    <td> {{ route.id }} </td>
+                    <td> {{ route.name }} </td>
+                    <td> {{ route.route }} </td>
+                    <td> {{ route.price_per_person }} </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
     </div>
+
+
 {% endblock %}
 {##}
 {#<!doctype html>#}
