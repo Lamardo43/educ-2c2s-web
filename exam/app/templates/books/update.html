@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    Обновить книгу
+{% endblock %}
+
+{% block content %}
+    {% if current_user.is_admin() %}
+        <h1>Обновить книгу</h1>
+        {% from 'books/base_form.html' import book_form %}
+        {{ book_form('update', genres, book_data) }}
+    {% else %}
+        <h1>У вас недостаточно прав для доступа к этой странице</h1>
+    {% endif %}
+{% endblock %}

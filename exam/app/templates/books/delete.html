@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    Удаление книги
+{% endblock %}
+
+{% block content %}
+
+    {% if current_user.is_admin() %}
+        <div class="d-flex justify-content-center align-items-center vh-100">
+            <div class="border p-4 bg-white">
+                <h1 class="modal-title fs-5 pt-3" id="title">Вы уверены, что хотите удалить книгу #{{ book_id }}?</h1>
+                <div class="d-flex justify-content-between pt-3">
+                    <a class="btn btn-primary w-50 m-2" href="{{ url_for('books.index') + "?page=" + page | string }}">Нет</a>
+                    <form action="{{ url_for('books.delete', book_id=book_id) + "?page=" + page | string }}" method="POST" class="w-50 m-2">
+                        <button type="submit" class="btn btn-danger w-100">Да</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <h1>У вас недостаточно прав для доступа к этой странице</h1>
+    {% endif %}
+{% endblock %}

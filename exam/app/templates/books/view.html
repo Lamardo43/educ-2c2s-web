@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    Просмотр книги
+{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <h1>Просмотр книги</h1>
+        <div>
+            <h3>{{ book.title }}</h3>
+            <p><strong>Автор:</strong> {{ book.author }}</p>
+            <p><strong>Описание:</strong> {{ book.description }}</p>
+            <p><strong>Жанры:</strong> {{ book.genres }}</p>
+            <p><strong>Год:</strong> {{ book.year }}</p>
+            <p><strong>Издатель:</strong> {{ book.publisher }}</p>
+            <p><strong>Количество страниц:</strong> {{ book.pages }}</p>
+            <p><strong>Средний рейтинг:</strong> {{ book.avg_rating }}</p>
+            <p><strong>Количество рецензий:</strong> {{ book.review_count }}</p>
+            {% if book.filename %}
+                <img src="{{  url_for('static', filename='images/' + book.filename)  }}" alt="Cover Image" class="img-fluid" style="height: 300px">
+            {% else %}
+                <p>No cover image available</p>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

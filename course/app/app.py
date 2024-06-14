@@ -362,6 +362,7 @@ def export_orders():
 
     return send_file(BytesIO(file.encode()), as_attachment=True, mimetype='text/csv', download_name='export_orders.csv')
 
+
 @app.route('/export_routes.csv')
 @login_required
 def export_routes():
@@ -375,12 +376,13 @@ def export_routes():
         for route in routes:
             file += ','.join([str(getattr(route, field)) for field in fields_in_db]) + '\n'
 
-        return send_file(BytesIO(file.encode()), as_attachment=True, mimetype='text/csv', download_name='export_routes.csv')
+        return send_file(BytesIO(file.encode()), as_attachment=True, mimetype='text/csv',
+                         download_name='export_routes.csv')
+
 
 @app.route('/account')
 @login_required
 def account():
-    export_routes()
     if current_user.is_guide():
         return render_template("account.html", orders=get_orders_by_user(current_user.id, current_user.role),
                                routes=get_routes_by_guide(current_user.id))

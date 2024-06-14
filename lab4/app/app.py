@@ -1,7 +1,7 @@
 from flask import Flask, render_template, session, request, redirect, url_for, flash
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required
 from functools import wraps
-from .mysqldb import DBConnector
+from mysqldb import DBConnector
 import mysql.connector as connector
 import re
 
@@ -37,24 +37,25 @@ def check_for_login(function):
 
 def check_login(login):
     errors = []
-    if len(login) < 5:
+    if login is None or len(login) < 5:
         errors.append("Длина логина должна быть не менее 5 символов.")
-    if not re.match("^[a-zA-Z0-9]+$", login):
+    if login and not re.match("^[a-zA-Z0-9]+$", login):
         errors.append("Логин должен содержать только латинские буквы и цифры.")
     return errors
 
 
 def check_password(password):
     errors = []
-    if len(password) < 8 or len(password) > 128:
+    if password is None or len(password) < 8 or len(password) > 128:
         errors.append("Длина пароля должна быть от 8 до 128 символов.")
-    if not re.search("[a-z]", password):
+
+    if password is None or not re.search("[a-z]", password):
         errors.append("Пароль должен содержать как минимум одну строчную букву.")
-    if not re.search("[A-Z]", password):
+    if password is None or not re.search("[A-Z]", password):
         errors.append("Пароль должен содержать как минимум одну заглавную букву.")
-    if not re.search("[0-9]", password):
+    if password is None or not re.search("[0-9]", password):
         errors.append("Пароль должен содержать как минимум одну цифру.")
-    if not re.search(r"[~!@#$%^&*_\-+=()\[\]{}><\\/|\"'.,:;]", password):
+    if password is None or not re.search(r"[~!@#$%^&*_\-+=()\[\]{}><\\/|\"'.,:;]", password):
         errors.append("Пароль должен содержать хотя бы один специальный символ")
     return errors
 
@@ -138,6 +139,7 @@ def change_password():
         old_password = request.form['old_password']
         new_password = request.form['new_password']
         confirm_password = request.form['confirm_password']
+        errors['confirm_password'] = ''
         if confirm_password != new_password:
             errors['confirm_password'] = ['Пароли должны совпадать']
 
@@ -147,13 +149,16 @@ def change_password():
             with connection.cursor(named_tuple=True, buffered=True) as cursor:
                 cursor.execute("SELECT id FROM users WHERE id = %s AND password_hash = SHA2(%s, 256)",
                                [user_id, old_password])
+                errors['old_password'] = ''
                 if not cursor.fetchone():
                     errors['old_password'] = ['Введён неверный пароль']
 
                 errors['new_password'] = check_password(new_password)
-                if not errors['new_password'] and not errors['new_password']:
+                print(errors)
+                if not errors['old_password'] and not errors['new_password'] and not errors['confirm_password']:
                     cursor.execute("UPDATE users SET password_hash = SHA2(%s, 256) WHERE id = %s",
                                    [new_password, user_id])
+                    connection.commit()
                     flash("Вы успешно сменили пароль", "success")
                     return redirect(url_for('users'))
         except connector.errors.DatabaseError:

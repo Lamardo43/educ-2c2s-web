@@ -1,0 +1,186 @@
+-- Table for covers
+CREATE TABLE covers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    mime_type VARCHAR(255) NOT NULL,
+    md5_hash VARCHAR(32) NOT NULL
+);
+
+-- Table for books
+CREATE TABLE books (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    year INT NOT NULL,
+    publisher VARCHAR(255) NOT NULL,
+    author VARCHAR(255) NOT NULL,
+    pages INT NOT NULL,
+    cover_id INT NOT NULL,
+    FOREIGN KEY (cover_id) REFERENCES covers(id) ON DELETE CASCADE
+);
+
+-- Table for genres
+CREATE TABLE genres (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE
+);
+
+-- Many-to-many relationship table for books and genres
+CREATE TABLE book_genres (
+    book_id INT NOT NULL,
+    genre_id INT NOT NULL,
+    PRIMARY KEY (book_id, genre_id),
+    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
+    FOREIGN KEY (genre_id) REFERENCES genres(id)
+);
+
+-- Table for user roles
+CREATE TABLE roles (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL
+);
+
+-- Table for users
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    login VARCHAR(255) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    last_name VARCHAR(255) NOT NULL,
+    first_name VARCHAR(255) NOT NULL,
+    middle_name VARCHAR(255),
+    role_id INT NOT NULL,
+    FOREIGN KEY (role_id) REFERENCES roles(id)
+);
+
+-- Table for reviews
+CREATE TABLE reviews (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    book_id INT NOT NULL,
+    user_id INT NOT NULL,
+    rating INT NOT NULL,
+    review_text TEXT NOT NULL,
+    date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- Заполнение таблицы covers
+INSERT INTO covers (mime_type, md5_hash) VALUES
+('image/jpeg', 'd41d8cd98f00b204e9800998ecf8427e'),
+('image/png', 'd41d8cd98f00b204e9800998ecf8427f'),
+('image/gif', 'd41d8cd98f00b204e9800998ecf84280');
+
+-- Заполнение таблицы books
+INSERT INTO books (title, description, year, publisher, author, pages, cover_id) VALUES
+('Book One', 'Description of Book One', 2020, 'Publisher One', 'Author One', 300, 1),
+('Book Two', 'Description of Book Two', 2019, 'Publisher Two', 'Author Two', 250, 2),
+('Book Three', 'Description of Book Three', 2021, 'Publisher Three', 'Author Three', 350, 3),
+('Book Four', 'Description of Book Four', 2018, 'Publisher Four', 'Author Four', 400, 1),
+('Book Five', 'Description of Book Five', 2017, 'Publisher Five', 'Author Five', 275, 2),
+('Book Six', 'Description of Book Six', 2016, 'Publisher Six', 'Author Six', 320, 3),
+('Book Seven', 'Description of Book Seven', 2022, 'Publisher Seven', 'Author Seven', 330, 1),
+('Book Eight', 'Description of Book Eight', 2015, 'Publisher Eight', 'Author Eight', 290, 2),
+('Book Nine', 'Description of Book Nine', 2014, 'Publisher Nine', 'Author Nine', 310, 3),
+('Book Ten', 'Description of Book Ten', 2013, 'Publisher Ten', 'Author Ten', 260, 1);
+
+-- Заполнение таблицы genres
+INSERT INTO genres (name) VALUES
+('Fiction'),
+('Non-Fiction'),
+('Science Fiction'),
+('Fantasy'),
+('Biography'),
+('History'),
+('Mystery'),
+('Thriller'),
+('Romance'),
+('Young Adult');
+
+-- Заполнение таблицы book_genre
+INSERT INTO book_genre (book_id, genre_id) VALUES
+(1, 1),
+(2, 2),
+(3, 3),
+(4, 4),
+(5, 5),
+(6, 6),
+(7, 7),
+(8, 8),
+(9, 9),
+(10, 10),
+(1, 3),
+(2, 4),
+(3, 5),
+(4, 6),
+(5, 7),
+(6, 8),
+(7, 9),
+(8, 10),
+(9, 1),
+(10, 2);
+
+-- Заполнение таблицы roles
+INSERT INTO roles (name, description) VALUES
+('Admin', 'Administrator with full access'),
+('Moderator', 'Moderator with not full access'),
+('User', 'Regular user with limited access');
+
+-- Заполнение таблицы users
+INSERT INTO users (login, password_hash, last_name, first_name, middle_name, role_id) VALUES
+('admin', SHA2('password', 256), 'Admin', 'Admin', NULL, 1),
+('user', SHA2('password', 256), 'Doe', 'John', 'A.', 3),
+('moderator', SHA2('password', 256), 'Smith', 'Jane', 'B.', 2);
+
+-- Заполнение таблицы reviews
+INSERT INTO reviews (book_id, user_id, rating, review_text) VALUES
+(1, 2, 5, 'Great book, really enjoyed it!'),
+(2, 3, 4, 'Interesting read, but a bit slow in the middle.'),
+(3, 2, 3, 'It was okay, not my favorite.'),
+(4, 3, 5, 'Loved it! Highly recommend.'),
+(5, 2, 4, 'Good book with some great insights.'),
+(6, 3, 2, 'Not what I expected, a bit disappointing.'),
+(7, 2, 5, 'Fantastic! A must-read.'),
+(8, 3, 4, 'Pretty good, would read again.'),
+(9, 2, 3, 'Average, nothing special.'),
+(10, 3, 5, 'Excellent! Couldn’t put it down.');
+

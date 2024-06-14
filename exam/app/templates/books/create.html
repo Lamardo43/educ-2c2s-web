@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    {% if current_user.is_admin() %}
+        <h1>Добавить книгу</h1>
+        {% from 'books/base_form.html' import book_form %}
+        {{ book_form('new', genres) }}
+        {% else %}
+        <h1>У вас недостаточно прав для доступа к этой странице</h1>
+    {% endif %}
+
+{% endblock %}
+
