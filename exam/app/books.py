@@ -3,6 +3,8 @@ import hashlib
 import logging
 import math
 import os
+from datetime import datetime
+from pprint import pprint
 
 from flask import Blueprint, render_template, request, flash, redirect, url_for
 from flask_login import login_required, current_user
@@ -21,7 +23,7 @@ logger = logging.getLogger(__name__)
 def get_books_with_pagination(offset):
     with db_connector.connect().cursor(named_tuple=True, buffered=True) as cursor:
         cursor.execute("SELECT b.*, c.filename, GROUP_CONCAT(g.name SEPARATOR ', ') as genres,  "
-                       "AVG(r.rating) as avg_rating, COUNT(r.id) as review_count FROM books b "
+                       "ROUND(AVG(r.rating), 1) as avg_rating, COUNT(r.id) as review_count FROM books b "
                        "LEFT JOIN covers c ON b.cover_id = c.id "
                        "LEFT JOIN book_genres bg ON b.id = bg.book_id "
                        "LEFT JOIN genres g ON bg.genre_id = g.id "
@@ -65,7 +67,6 @@ def save_cover(background_image):
                     cover_id = cursor.lastrowid
 
                     db_connector.connect().commit()
-
             filename = f"{md5_hash}.png"
 
             file_path = os.path.join('static/images', filename)
@@ -131,12 +132,11 @@ def create():
     if current_user.is_admin():
         if request.method == 'POST':
             book_data = {field: request.form.get(field) for field in fields}
-            genres_selected = request.form.getlist('genre')
+            genres_selected = request.form.getlist('genres[]')
+            print(genres_selected)
             background_image = request.files.get('background_image')
             # print(background_image.mimetype)
             cover_id = save_cover(background_image)
-
-            print(cover_id)
 
             with db_connector.connect().cursor(named_tuple=True, buffered=True) as cursor:
                 cursor.execute(
@@ -165,19 +165,17 @@ def update(book_id):
         if request.method == 'POST':
             fields = ['title', 'author', 'description', 'year', 'publisher', 'pages']
             book_data = {field: request.form.get(field) for field in fields}
-            genres_selected = request.form.getlist('genre')
-
+            genres_selected = request.form.getlist('genres[]')
             with db_connector.connect().cursor(named_tuple=True, buffered=True) as cursor:
                 cursor.execute("UPDATE books SET title = %(title)s, description = %(description)s, year = %(year)s, "
                                "publisher = %(publisher)s, author = %(author)s, pages = %(pages)s WHERE id = %(book_id)s",
                                {**book_data, 'book_id': book_id})
-                cursor.execute("DELETE FROM book_genres WHERE book_id = %s", (book_id,))
                 db_connector.connect().commit()
 
             insert_book_genres(book_id, genres_selected)
 
             flash("Книга успешно обновлена!", "success")
-            return redirect(url_for('books.index'))
+            return redirect(url_for('books.view', book_id=book_id))
 
     with db_connector.connect().cursor(named_tuple=True, buffered=True) as cursor:
         cursor.execute("SELECT * FROM books WHERE id = %s", (book_id,))
@@ -195,6 +193,7 @@ def update(book_id):
 
     book_dict = book._asdict()
     book_dict["selected_genres"] = [id[0] for id in selected_genres]
+    print(selected_genres)
     return render_template('books/update.html', genres=genres, book_data=book_dict, book_id=book_id)
 
 
@@ -202,14 +201,35 @@ def update(book_id):
 @login_required
 def view(book_id):
     with db_connector.connect().cursor(named_tuple=True, buffered=True) as cursor:
-        cursor.execute("SELECT b.*, c.filename, GROUP_CONCAT(g.name SEPARATOR ', ') as genres, "
-                       "AVG(r.rating) as avg_rating, COUNT(r.id) as review_count FROM "
-                       "books b LEFT JOIN covers c ON b.cover_id = c.id "
-                       "LEFT JOIN book_genres bg ON b.id = bg.book_id "
-                       "LEFT JOIN genres g ON bg.genre_id = g.id "
-                       "LEFT JOIN reviews r ON b.id = r.book_id "
-                       "WHERE b.id = %s GROUP BY b.id", [book_id])
+        cursor.execute("""
+        SELECT b.*, 
+           c.filename,
+           (SELECT GROUP_CONCAT(g.name SEPARATOR ', ') 
+            FROM book_genres bg 
+            JOIN genres g ON bg.genre_id = g.id 
+            WHERE bg.book_id = b.id) AS genres,
+           (SELECT ROUND(AVG(r.rating), 1) 
+            FROM reviews r 
+            WHERE r.book_id = b.id) AS avg_rating,
+           (SELECT COUNT(r.id) 
+            FROM reviews r 
+            WHERE r.book_id = b.id) AS review_count
+    FROM books b
+    LEFT JOIN covers c ON b.cover_id = c.id
+    WHERE b.id = %s;
+        """, [book_id])
         book = cursor.fetchone()
+
+        cursor.execute("SELECT rating, review_text, date_added, "
+                       "CONCAT(first_name, "
+                       "IF(middle_name IS NOT NULL, CONCAT(' ', middle_name), ''), ' ', last_name) AS full_name "
+                       "FROM reviews "
+                       "LEFT JOIN users on reviews.user_id = users.id "
+                       "WHERE reviews.book_id = %s", (book_id,))
+        reviews = cursor.fetchall()
+
+        cursor.execute("SELECT * FROM reviews WHERE user_id = %s and book_id = %s", (current_user.id, book_id))
+        is_commented = cursor.fetchone() is not None
 
     if not book:
         flash("Книга не найдена", "warning")
@@ -217,13 +237,7 @@ def view(book_id):
 
     book_dict = book._asdict()
 
-    # filename = book_dict.get('filename')
-    # if filename:
-    #     file_data = asyncio.run(s3_client.get_file(filename))
-    #     if file_data:
-    #         book_dict['background_image'] = file_data
-
-    return render_template('books/view.html', book=book_dict)
+    return render_template('books/view.html', book=book_dict, reviews=reviews, is_commented=is_commented)
 
 
 @bp.route('/delete/<int:book_id>', methods=['POST', 'GET'])
@@ -266,3 +280,28 @@ def delete(book_id):
                 connection.rollback()
             return redirect(url_for('books.index') + '?page=' + page)
     return render_template("books/delete.html", book_id=book_id, page=page)
+
+
+@bp.route('/add_review/<int:book_id>', methods=['POST', 'GET'])
+@login_required
+def add_review(book_id):
+    if request.method == 'POST':
+        try:
+            connection = db_connector.connect()
+            with connection.cursor(named_tuple=True, buffered=True) as cursor:
+                cursor.execute("INSERT INTO reviews(book_id, user_id, rating, review_text, date_added) "
+                               "VALUES (%s, %s, %s, %s, %s)",
+                               (book_id, current_user.id, request.form['rating'],
+                                request.form['review_text'], datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+            connection.commit()
+            flash('Рецензия успешно добавлена!', 'success')
+        except Exception as e:
+            print(e)
+            flash("Произошла ошибка при написании рецензии.", "danger")
+            connection.rollback()
+        finally:
+            connection.close()
+
+        return redirect(url_for('books.view', book_id=book_id))
+
+    return render_template("books/add_review.html", book_id=book_id)

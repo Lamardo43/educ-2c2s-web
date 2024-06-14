@@ -1,49 +1,51 @@
 {% macro book_form(action, genres, book_data={}) %}
     <form method="post" enctype="multipart/form-data">
-        <div class="form-group">
-            <label for="title">Название</label>
-            <input type="text" class="form-control" id="title" name="title" value="{{ book_data.title or '' }}"
-                   required>
-        </div>
-        <div class="form-group">
-            <label for="author">Автор</label>
-            <input type="text" class="form-control" id="author" name="author" value="{{ book_data.author or '' }}"
-                   required>
-        </div>
-        <div class="form-group">
-            <label for="description">Описание</label>
-            <textarea class="form-control" id="description"
-                      name="description">{{ book_data.description or '' }}</textarea>
-        </div>
-        <div class="form-group">
-            <label for="year">Год</label>
-            <input type="number" class="form-control" id="year" name="year" value="{{ book_data.year or '' }}" required>
-        </div>
-        <div class="form-group">
-            <label for="publisher">Издатель</label>
-            <input type="text" class="form-control" id="publisher" name="publisher"
-                   value="{{ book_data.publisher or '' }}" required>
-        </div>
-        <div class="form-group">
-            <label for="pages">Количество страниц</label>
-            <input type="number" class="form-control" id="pages" name="pages" value="{{ book_data.pages or '' }}"
-                   required>
-        </div>
-        <div class="form-group">
-            <label for="genre">Жанры</label>
-            <select class="form-select" id="genre" name="genre" multiple aria-label="multiple select example" required>
-                {% for genre in genres %}
-                    <option value="{{ genre.id }}"
-                            {% if genre.id in book_data.selected_genres %}selected{% endif %}>{{ genre.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        {% if action == 'new' %}
-            <div class="form-group">
-                <label for="background_image">Изображение обложки</label>
-                <input type="file" class="form-control-file" id="background_image" name="background_image">
-            </div>
-        {% endif %}
+        <table class="table">
+            <tbody>
+                <tr>
+                    <td><label for="title" class="form-label">Название</label></td>
+                    <td><input type="text" class="form-control" id="title" name="title" value="{{ book_data.title or '' }}" required></td>
+                </tr>
+                <tr>
+                    <td><label for="author" class="form-label">Автор</label></td>
+                    <td><input type="text" class="form-control" id="author" name="author" value="{{ book_data.author or '' }}" required></td>
+                </tr>
+                <tr>
+                    <td><label for="description" class="form-label">Описание</label></td>
+                    <td><textarea class="form-control" id="description" name="description" rows="5">{{ book_data.description or '' }}</textarea></td>
+                </tr>
+                <tr>
+                    <td><label for="year" class="form-label">Год</label></td>
+                    <td><input type="number" class="form-control" id="year" name="year" value="{{ book_data.year or '' }}" required></td>
+                </tr>
+                <tr>
+                    <td><label for="publisher" class="form-label">Издатель</label></td>
+                    <td><input type="text" class="form-control" id="publisher" name="publisher" value="{{ book_data.publisher or '' }}" required></td>
+                </tr>
+                <tr>
+                    <td><label for="pages" class="form-label">Количество страниц</label></td>
+                    <td><input type="number" class="form-control" id="pages" name="pages" value="{{ book_data.pages or '' }}" required></td>
+                </tr>
+                <tr>
+                    <td><label class="form-label">Жанры</label></td>
+                    <td>
+                        {% for genre in genres %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="genre_{{ genre.id }}" name="genres[]" value="{{ genre.id }}"
+                                       {% if genre.id in book_data.selected_genres %}checked{% endif %}>
+                                <label class="form-check-label" for="genre_{{ genre.id }}">{{ genre.name }}</label>
+                            </div>
+                        {% endfor %}
+                    </td>
+                </tr>
+                {% if action == 'new' %}
+                    <tr>
+                        <td><label for="background_image" class="form-label">Изображение обложки</label></td>
+                        <td><input type="file" class="form-control-file" id="background_image" name="background_image"></td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
         <button type="submit" class="btn btn-primary">Сохранить</button>
     </form>
 {% endmacro %}
