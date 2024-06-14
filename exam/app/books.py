@@ -1,14 +1,10 @@
-import asyncio
 import hashlib
-import logging
 import math
 import os
 from datetime import datetime
-from pprint import pprint
 
 from flask import Blueprint, render_template, request, flash, redirect, url_for
 from flask_login import login_required, current_user
-from werkzeug.utils import secure_filename
 
 from app import db_connector
 
@@ -16,37 +12,16 @@ bp = Blueprint('books', __name__, url_prefix='/books')
 
 MAX_PER_PAGE = 8
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 
 def get_books_with_pagination(offset):
     with db_connector.connect().cursor(named_tuple=True, buffered=True) as cursor:
-        cursor.execute("SELECT b.*, c.filename, GROUP_CONCAT(g.name SEPARATOR ', ') as genres,  "
-                       "ROUND(AVG(r.rating), 1) as avg_rating, COUNT(r.id) as review_count FROM books b "
-                       "LEFT JOIN covers c ON b.cover_id = c.id "
-                       "LEFT JOIN book_genres bg ON b.id = bg.book_id "
-                       "LEFT JOIN genres g ON bg.genre_id = g.id "
-                       "LEFT JOIN reviews r ON b.id = r.book_id "
-                       "GROUP BY b.id ORDER BY b.year DESC LIMIT %s OFFSET %s", (MAX_PER_PAGE, offset))
+        cursor.execute("SELECT b.*, c.filename, "
+                       "(SELECT GROUP_CONCAT(g.name SEPARATOR ', ') FROM book_genres bg "
+                       "JOIN genres g ON bg.genre_id = g.id WHERE bg.book_id = b.id) AS genres, "
+                       "(SELECT ROUND(AVG(r.rating), 1) FROM reviews r WHERE r.book_id = b.id) AS avg_rating, "
+                       "(SELECT COUNT(r.id) FROM reviews r WHERE r.book_id = b.id) AS review_count "
+                       "FROM books b LEFT JOIN covers c ON b.cover_id = c.id ORDER BY b.year DESC LIMIT %s OFFSET %s", (MAX_PER_PAGE, offset))
         return cursor.fetchall()
-
-
-# def save_cover(background_image):
-#     if background_image:
-#         # Generate unique filename using MD5 hash
-#         md5_hash = hashlib.md5(background_image.read()).hexdigest()
-#         file_extension = background_image.filename.rsplit('.', 1)[-1].lower()  # Get file extension
-#         filename = f"{md5_hash}.{file_extension}"
-#
-#         # Save the file to disk
-#         file_path = os.path.join('media/images', filename)
-#         background_image.seek(0)  # Reset file pointer
-#         background_image.save(file_path)
-#
-#         return filename  # Return the filename saved
-#
-#     return None
 
 
 def save_cover(background_image):
@@ -112,7 +87,7 @@ def index():
         total_books = cursor.fetchone().count
 
     books = get_books_with_pagination(offset)
-    logger.info(f'Fetched: {len(books)} books')
+    print(f'Fetched: {len(books)} books')
     books = [book._asdict() for book in books]
 
     # print(books)
@@ -201,23 +176,12 @@ def update(book_id):
 @login_required
 def view(book_id):
     with db_connector.connect().cursor(named_tuple=True, buffered=True) as cursor:
-        cursor.execute("""
-        SELECT b.*, 
-           c.filename,
-           (SELECT GROUP_CONCAT(g.name SEPARATOR ', ') 
-            FROM book_genres bg 
-            JOIN genres g ON bg.genre_id = g.id 
-            WHERE bg.book_id = b.id) AS genres,
-           (SELECT ROUND(AVG(r.rating), 1) 
-            FROM reviews r 
-            WHERE r.book_id = b.id) AS avg_rating,
-           (SELECT COUNT(r.id) 
-            FROM reviews r 
-            WHERE r.book_id = b.id) AS review_count
-    FROM books b
-    LEFT JOIN covers c ON b.cover_id = c.id
-    WHERE b.id = %s;
-        """, [book_id])
+        cursor.execute("SELECT b.*, c.filename, "
+                       "(SELECT GROUP_CONCAT(g.name SEPARATOR ', ') FROM book_genres bg "
+                       "JOIN genres g ON bg.genre_id = g.id WHERE bg.book_id = b.id) AS genres, "
+                       "(SELECT ROUND(AVG(r.rating), 1) FROM reviews r WHERE r.book_id = b.id) AS avg_rating, "
+                       "(SELECT COUNT(r.id) FROM reviews r WHERE r.book_id = b.id) AS review_count "
+                       "FROM books b LEFT JOIN covers c ON b.cover_id = c.id WHERE b.id = %s;", [book_id])
         book = cursor.fetchone()
 
         cursor.execute("SELECT rating, review_text, date_added, "
