@@ -1,7 +1,5 @@
-from functools import wraps
-
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
-from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user
+from flask_login import LoginManager, UserMixin, login_user, logout_user
 
 from app import db_connector
 
