@@ -4,28 +4,6 @@
     Просмотр книги
 {% endblock %}
 
-{% block header %}
-    <a class="navbar-brand" href="{{ url_for('index') }}">Назад</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
-                    data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
-                    aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item">
-                        {% if current_user.is_authenticated %}
-                            <a class="nav-link active" aria-current="page" href="{{ url_for('auto.logout') }}">Выход
-                        {% else %}
-                            <a class="nav-link active" aria-current="page" href="{{ url_for('auto.auth') }}">
-                            Авторизация
-                        {% endif %}
-                        </a>
-                    </li>
-                </ul>
-            </div>
-{% endblock %}
-
 {% block content %}
     <div class="container mt-5">
         <h1 class="mb-4">Просмотр книги</h1>
@@ -74,7 +52,11 @@
                 </table>
                 <div>
                     <h4>Описание:</h4>
-                    <p>{{ book.description }}</p>
+                    <div id="description-display"></div>
+                    <div class="class_to_hide" hidden>
+                        <textarea id="book-description">{{ book.description }}</textarea>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -116,4 +98,14 @@
 
         </div>
     </div>
+{% endblock %}
+
+{% block scripts %}
+    <script>
+        const easyMDE = new EasyMDE({element: document.getElementById('book-description')});
+    </script>
+    <script>
+        const htmlContent = easyMDE.options.previewRender(easyMDE.value());
+        document.getElementById('description-display').innerHTML = htmlContent;
+    </script>
 {% endblock %}

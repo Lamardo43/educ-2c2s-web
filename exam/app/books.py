@@ -1,6 +1,7 @@
 import hashlib
 import math
 import os
+import bleach
 from datetime import datetime
 
 from flask import Blueprint, render_template, request, flash, redirect, url_for
@@ -89,6 +90,7 @@ def create():
             selected_genres = request.form.getlist('genres[]')
             cover_image = request.files.get('cover_image')
             cover_id = save_cover(cover_image)
+            book_data['description'] = bleach.clean(book_data['description'])
 
             with db_connector.connect().cursor(named_tuple=True, buffered=True) as cursor:
                 cursor.execute("INSERT INTO books (title, description, year, publisher, author, pages, cover_id) VALUES"
@@ -117,6 +119,8 @@ def edit(book_id):
             fields = ['title', 'author', 'description', 'year', 'publisher', 'pages']
             book_data = {field: request.form.get(field) for field in fields}
             selected_genres = request.form.getlist('genres[]')
+            book_data['description'] = bleach.clean(book_data['description'])
+
             with db_connector.connect().cursor(named_tuple=True, buffered=True) as cursor:
                 cursor.execute("UPDATE books SET title = %(title)s, description = %(description)s, year = %(year)s, "
                                "publisher = %(publisher)s, author = %(author)s, pages = %(pages)s WHERE id = %(book_id)s",
