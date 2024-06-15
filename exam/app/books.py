@@ -13,17 +13,6 @@ bp = Blueprint('books', __name__, url_prefix='/books')
 MAX_PER_PAGE = 8
 
 
-def get_books_with_pagination(offset):
-    with db_connector.connect().cursor(named_tuple=True, buffered=True) as cursor:
-        cursor.execute("SELECT b.*, c.filename, "
-                       "(SELECT GROUP_CONCAT(g.name SEPARATOR ', ') FROM book_genres bg "
-                       "JOIN genres g ON bg.genre_id = g.id WHERE bg.book_id = b.id) AS genres, "
-                       "(SELECT ROUND(AVG(r.rating), 1) FROM reviews r WHERE r.book_id = b.id) AS avg_rating, "
-                       "(SELECT COUNT(r.id) FROM reviews r WHERE r.book_id = b.id) AS review_count "
-                       "FROM books b LEFT JOIN covers c ON b.cover_id = c.id ORDER BY b.year DESC LIMIT %s OFFSET %s", (MAX_PER_PAGE, offset))
-        return cursor.fetchall()
-
-
 def save_cover(background_image):
     if background_image:
         md5_hash = hashlib.md5(background_image.read()).hexdigest()
@@ -50,30 +39,17 @@ def save_cover(background_image):
 
             return cover_id
         except Exception as e:
-            # Handle any exceptions, e.g., log the error
-            print(f"Error saving cover: {e}")
-            db_connector.connect().rollback()  # Rollback the transaction on error
+            print(f"Ошибка сохранения обложки: {e}")
+            db_connector.connect().rollback()
 
     return None
 
 
 def insert_book_genres(book_id, genres_selected):
-    data = [(book_id, genre_id) for genre_id in genres_selected]
-
     with db_connector.connect().cursor(named_tuple=True, buffered=True) as cursor:
-        insert_statement = "INSERT INTO book_genres (book_id, genre_id) VALUES (%s, %s)"
-        cursor.executemany(insert_statement, data)
+        cursor.executemany("INSERT IGNORE INTO book_genres (book_id, genre_id) VALUES (%s, %s)",
+                           [(book_id, genre_id) for genre_id in genres_selected])
         db_connector.connect().commit()
-
-
-#
-# async def add_background_images(books):
-#     for book in books:
-#         filename = book['filename']
-#         if filename:
-#             file_data = await s3_client.get_file(filename)
-#             if file_data:
-#                 book['background_image'] = file_data
 
 
 @bp.route('/')
@@ -86,13 +62,16 @@ def index():
         cursor.execute("SELECT COUNT(*) as count FROM books")
         total_books = cursor.fetchone().count
 
-    books = get_books_with_pagination(offset)
-    print(f'Fetched: {len(books)} books')
+        cursor.execute("SELECT b.*, c.filename, "
+                       "(SELECT GROUP_CONCAT(g.name SEPARATOR ', ') FROM book_genres bg "
+                       "JOIN genres g ON bg.genre_id = g.id WHERE bg.book_id = b.id) AS genres, "
+                       "(SELECT ROUND(AVG(r.rating), 1) FROM reviews r WHERE r.book_id = b.id) AS avg_rating, "
+                       "(SELECT COUNT(r.id) FROM reviews r WHERE r.book_id = b.id) AS review_count "
+                       "FROM books b LEFT JOIN covers c ON b.cover_id = c.id ORDER BY b.year DESC LIMIT %s OFFSET %s",
+                       (MAX_PER_PAGE, offset))
+        books = cursor.fetchall()
+
     books = [book._asdict() for book in books]
-
-    # print(books)
-
-    # asyncio.run(add_background_images(books))
 
     page_count = math.ceil(total_books / MAX_PER_PAGE)
     pages = range(1, page_count + 1)
@@ -107,21 +86,18 @@ def create():
     if current_user.is_admin():
         if request.method == 'POST':
             book_data = {field: request.form.get(field) for field in fields}
-            genres_selected = request.form.getlist('genres[]')
-            print(genres_selected)
-            background_image = request.files.get('background_image')
-            # print(background_image.mimetype)
-            cover_id = save_cover(background_image)
+            selected_genres = request.form.getlist('genres[]')
+            cover_image = request.files.get('cover_image')
+            cover_id = save_cover(cover_image)
 
             with db_connector.connect().cursor(named_tuple=True, buffered=True) as cursor:
-                cursor.execute(
-                    "INSERT INTO books (title, description, year, publisher, author, pages, cover_id) VALUES "
-                    "(%(title)s, %(description)s, %(year)s, %(publisher)s, %(author)s, %(pages)s, %(cover_id)s)",
-                    {**book_data, 'cover_id': cover_id})
+                cursor.execute("INSERT INTO books (title, description, year, publisher, author, pages, cover_id) VALUES"
+                               " (%(title)s, %(description)s, %(year)s, %(publisher)s, %(author)s, %(pages)s, %(cover_id)s)",
+                               {**book_data, 'cover_id': cover_id})
                 book_id = cursor.lastrowid
                 db_connector.connect().commit()
 
-            insert_book_genres(book_id, genres_selected)
+            insert_book_genres(book_id, selected_genres)
 
             flash("Книга успешно добавлена!", "success")
             return redirect(url_for('books.index'))
@@ -133,21 +109,21 @@ def create():
     return render_template('books/create.html', genres=genres, book_data={"genres": []})
 
 
-@bp.route('/update/<int:book_id>', methods=['GET', 'POST'])
+@bp.route('/edit/<int:book_id>', methods=['GET', 'POST'])
 @login_required
-def update(book_id):
+def edit(book_id):
     if current_user.is_admin() or current_user.is_moderator():
         if request.method == 'POST':
             fields = ['title', 'author', 'description', 'year', 'publisher', 'pages']
             book_data = {field: request.form.get(field) for field in fields}
-            genres_selected = request.form.getlist('genres[]')
+            selected_genres = request.form.getlist('genres[]')
             with db_connector.connect().cursor(named_tuple=True, buffered=True) as cursor:
                 cursor.execute("UPDATE books SET title = %(title)s, description = %(description)s, year = %(year)s, "
                                "publisher = %(publisher)s, author = %(author)s, pages = %(pages)s WHERE id = %(book_id)s",
                                {**book_data, 'book_id': book_id})
                 db_connector.connect().commit()
 
-            insert_book_genres(book_id, genres_selected)
+            insert_book_genres(book_id, selected_genres)
 
             flash("Книга успешно обновлена!", "success")
             return redirect(url_for('books.view', book_id=book_id))
@@ -168,8 +144,7 @@ def update(book_id):
 
     book_dict = book._asdict()
     book_dict["selected_genres"] = [id[0] for id in selected_genres]
-    print(selected_genres)
-    return render_template('books/update.html', genres=genres, book_data=book_dict, book_id=book_id)
+    return render_template('books/edit.html', genres=genres, book_data=book_dict, book_id=book_id)
 
 
 @bp.route('/view/<int:book_id>')

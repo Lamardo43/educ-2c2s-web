@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
 {% block title %}
-    Обновить книгу
+    Редактировать книгу
 {% endblock %}
 
 
@@ -29,7 +29,7 @@
 
 {% block content %}
     {% if current_user.is_admin() %}
-        <h1>Обновить книгу</h1>
+        <h1>Редактировать книгу</h1>
         {% from 'books/base_form.html' import book_form %}
         {{ book_form('update', genres, book_data) }}
     {% else %}
