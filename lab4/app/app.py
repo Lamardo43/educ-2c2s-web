@@ -1,6 +1,5 @@
 from flask import Flask, render_template, session, request, redirect, url_for, flash
 from flask_login import LoginManager, UserMixin, login_user, logout_user, current_user, login_required
-from functools import wraps
 from mysqldb import DBConnector
 import mysql.connector as connector
 import re
@@ -24,17 +23,6 @@ class User(UserMixin):
         self.user_login = user_login
 
 
-def check_for_login(function):
-    @wraps(function)
-    def wrapper(*args, **kwargs):
-        if not current_user.is_authenticated:
-            flash('Вы не авторизованы', 'warning')
-            return redirect(url_for('index'))
-        return function(*args, **kwargs)
-
-    return wrapper
-
-
 def check_login(login):
     errors = []
     if login is None or len(login) < 5:
@@ -48,7 +36,6 @@ def check_password(password):
     errors = []
     if password is None or len(password) < 8 or len(password) > 128:
         errors.append("Длина пароля должна быть от 8 до 128 символов.")
-
     if password is None or not re.search("[a-z]", password):
         errors.append("Пароль должен содержать как минимум одну строчную букву.")
     if password is None or not re.search("[A-Z]", password):
