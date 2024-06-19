@@ -122,7 +122,7 @@ def edit(book_id):
             with db_connector.connect().cursor(named_tuple=True, buffered=True) as cursor:
                 cursor.execute(
                     "UPDATE books SET title = %s, description = %s, year = %s, "
-                    "publisher = %(s, author = %s, pages = %s WHERE id = %s",
+                    "publisher = %s, author = %s, pages = %s WHERE id = %s",
                     (book_data['title'], book_data['description'], book_data['year'], book_data['publisher'],
                      book_data['author'], book_data['pages'], book_id))
 
@@ -150,8 +150,10 @@ def edit(book_id):
         selected_genres = cursor.fetchall()
 
     book_dict = book._asdict()
+    selected_genres_list = []
     for id in selected_genres:
-        book_dict["selected_genres"] = id.genre_id
+        selected_genres_list.append(id.genre_id)
+    book_dict["selected_genres"] = selected_genres_list
 
     return render_template('books/edit.html', genres=genres, book_data=book_dict, book_id=book_id)
 
